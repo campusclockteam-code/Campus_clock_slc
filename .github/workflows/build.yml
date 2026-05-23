@@ -1,4 +1,4 @@
-name: Build APK
+﻿name: Build APK
 
 on:
   push:
@@ -14,6 +14,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
+      - name: Clear Gradle cache
+        run: |
+          rm -rf ~/.gradle/caches/
+          rm -rf .gradle/
+      
       - uses: actions/setup-java@v4
         with:
           java-version: '17'
@@ -22,7 +27,6 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.22.0'
-          channel: 'stable'
       
       - run: flutter clean
       - run: flutter pub get
