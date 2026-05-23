@@ -1,23 +1,15 @@
-﻿name: Build APK
+name: Build APK
 
 on:
   push:
     branches: [ main ]
   workflow_dispatch:
 
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      
-      - name: Clear Gradle cache
-        run: |
-          rm -rf ~/.gradle/caches/
-          rm -rf .gradle/
       
       - uses: actions/setup-java@v4
         with:
@@ -26,7 +18,7 @@ jobs:
       
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: '3.22.0'
+          flutter-version: '3.16.9'
       
       - run: flutter clean
       - run: flutter pub get
