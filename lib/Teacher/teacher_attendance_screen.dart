@@ -1,4 +1,4 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
+﻿import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:share_plus/share_plus.dart';
@@ -194,8 +194,8 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
           userId: studentUserId,
           title: 'Attendance Marked',
           body: present
-              ? '✓ You have been marked PRESENT for ${DateFormat('dd MMM yyyy').format(DateTime.now())}'
-              : '✗ You have been marked ABSENT for ${DateFormat('dd MMM yyyy').format(DateTime.now())}',
+              ? 'âœ“ You have been marked PRESENT for ${DateFormat('dd MMM yyyy').format(DateTime.now())}'
+              : 'âœ— You have been marked ABSENT for ${DateFormat('dd MMM yyyy').format(DateTime.now())}',
           senderName: _teacherName!,
           additionalData: {'course': _selectedCourse, 'rollNumber': rollNumber},
         );
@@ -539,7 +539,7 @@ class _TeacherAttendanceScreenState extends State<TeacherAttendanceScreen> {
         'markedVia': 'QR',
       });
 
-      _showSnackBar('✓ ${student['name']} marked present for $qrDate');
+      _showSnackBar('âœ“ ${student['name']} marked present for $qrDate');
       await _sendAttendanceNotification(student['id'], true);
 
       if (qrDate == DateFormat('yyyy-MM-dd').format(DateTime.now())) {

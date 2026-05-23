@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
+﻿import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import '../widgets/text_paste_dialog.dart';
-import '../service/fcm_service.dart';
+import '../Service/fcm_service.dart';
 
 class AdminScreen extends StatefulWidget {
   const AdminScreen({super.key});
@@ -118,7 +118,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   }
 
   // ===============================
-  // 🆕 AUTO SEMESTER UPDATE LOGIC
+  // ðŸ†• AUTO SEMESTER UPDATE LOGIC
   // ===============================
   Future<void> _autoUpdateSemester() async {
     // Confirmation dialog
@@ -210,14 +210,14 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       });
 
       Navigator.pop(context); // Close progress dialog
-      _showSnackBar('✅ Semester update complete! $updatedCount students updated.');
+      _showSnackBar('âœ… Semester update complete! $updatedCount students updated.');
       _refreshDashboard();
 
       // Optionally send notification to students about semester change
       await _sendSemesterUpdateNotification(updatedCount);
     } catch (e) {
       Navigator.pop(context);
-      _showSnackBar('❌ Error during semester update: $e', isError: true);
+      _showSnackBar('âŒ Error during semester update: $e', isError: true);
     }
   }
 
@@ -256,7 +256,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
           print('Student added with ID: $documentId');
         },
         onBatchComplete: (count) {
-          _showSnackBar('✅ Successfully added $count students');
+          _showSnackBar('âœ… Successfully added $count students');
           _refreshDashboard();
           if (_showStudentListView) {
             setState(() {});
@@ -321,7 +321,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       context: context,
       builder: (context) => AlertDialog(
         title: const Row(children: [Icon(Icons.warning, color: Colors.red), SizedBox(width: 8), Text('Delete All Students')]),
-        content: const Text('⚠️ WARNING: This will delete ALL student data from the database.\n\nThis action cannot be undone. Are you absolutely sure?'),
+        content: const Text('âš ï¸ WARNING: This will delete ALL student data from the database.\n\nThis action cannot be undone. Are you absolutely sure?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
           ElevatedButton(onPressed: () => Navigator.pop(context, true), style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('Delete All', style: TextStyle(color: Colors.white))),
@@ -333,12 +333,12 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       try {
         int deleted = await _deleteAllStudentsFromFirestore();
         Navigator.pop(context);
-        _showSnackBar('✅ Deleted $deleted student records');
+        _showSnackBar('âœ… Deleted $deleted student records');
         setState(() { _showStudentListView = false; _selectedViewCourse = null; });
         _refreshDashboard();
       } catch (e) {
         Navigator.pop(context);
-        _showSnackBar('❌ Error deleting data: $e', isError: true);
+        _showSnackBar('âŒ Error deleting data: $e', isError: true);
       }
     }
   }
@@ -372,12 +372,12 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       try {
         int deleted = await _deleteStudentsByYearFromFirestore(selectedYear);
         Navigator.pop(context);
-        _showSnackBar('✅ Deleted $deleted $selectedYear students');
+        _showSnackBar('âœ… Deleted $deleted $selectedYear students');
         setState(() { _showStudentListView = false; _selectedViewCourse = null; });
         _refreshDashboard();
       } catch (e) {
         Navigator.pop(context);
-        _showSnackBar('❌ Error deleting data: $e', isError: true);
+        _showSnackBar('âŒ Error deleting data: $e', isError: true);
       }
     }
   }
@@ -385,11 +385,11 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   Future<void> _deleteSingleStudent(String studentId) async {
     try {
       await FirebaseFirestore.instance.collection('students').doc(studentId).delete();
-      _showSnackBar('✅ Student deleted successfully');
+      _showSnackBar('âœ… Student deleted successfully');
       _refreshDashboard();
       if (_showStudentListView) setState(() {});
     } catch (e) {
-      _showSnackBar('❌ Failed to delete student: $e', isError: true);
+      _showSnackBar('âŒ Failed to delete student: $e', isError: true);
     }
   }
 
@@ -782,7 +782,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                 _buildDataActionCard('View Students', Icons.visibility, Colors.green, _showCourseSelection, isDarkMode, cardColor),
                 _buildDataActionCard('Delete by Year', Icons.delete_sweep, Colors.orange, _deleteStudentsByYear, isDarkMode, cardColor),
                 _buildDataActionCard('Delete All', Icons.delete_forever, Colors.red, _deleteAllStudentData, isDarkMode, cardColor),
-                // 🆕 NEW: Auto Semester Update Button
+                // ðŸ†• NEW: Auto Semester Update Button
                 _buildDataActionCard('Auto Semester', Icons.update, Colors.indigo, _autoUpdateSemester, isDarkMode, cardColor),
               ],
             ),
@@ -1104,7 +1104,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
               child: ListTile(
                 leading: CircleAvatar(child: Icon(Icons.message, color: _getGroupColor(message['targetGroup'] ?? 'all'))),
                 title: Text(message['message'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle: Text('To: ${_getGroupDisplayName(message['targetGroup'] ?? 'all')} • ${timestamp != null ? DateFormat('MMM d, HH:mm').format(timestamp.toDate()) : 'Unknown date'}'),
+                subtitle: Text('To: ${_getGroupDisplayName(message['targetGroup'] ?? 'all')} â€¢ ${timestamp != null ? DateFormat('MMM d, HH:mm').format(timestamp.toDate()) : 'Unknown date'}'),
                 trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteMessage(_allMessages[index].id, message['message'] ?? '')),
                 onTap: () => _showMessageDetails(message),
               ),
@@ -1290,7 +1290,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     if (message.trim().isEmpty) { _showSnackBar('Please enter a message', isError: true); return; }
     _showSnackBar('Sending message...');
     await Future.delayed(const Duration(seconds: 1));
-    _showSnackBar('✅ Message sent successfully to $targetGroup');
+    _showSnackBar('âœ… Message sent successfully to $targetGroup');
   }
 
   void _showMessageDetails(Map<String, dynamic> message) { _showSnackBar('Message details: ${message['message']}'); }
