@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "421002891119",
+    "project_id": "campusclockslc-c63c9",
+    "storage_bucket": "campusclockslc-c63c9.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:421002891119:android:0f038e326433448d7f229a",
+        "android_client_info": {
+          "package_name": "com.example.campus_clock_slc"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDbqcMM84Pip0AzDWEGEcrF6zIkA-nzsyw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
