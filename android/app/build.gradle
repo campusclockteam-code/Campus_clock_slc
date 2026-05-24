@@ -19,7 +19,7 @@ android {
 
     defaultConfig {
         applicationId "com.example.campus_clock_slc"
-        minSdkVersion flutter.minSdkVersion
+        minSdk 23
         targetSdk 34
         versionCode 1
         versionName "1.0.0"
