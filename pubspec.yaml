@@ -1,39 +1,37 @@
-﻿dependencies:
+﻿name: campus_clock_slc
+description: Campus Clock App for Shyam Lal College
+publish_to: 'none'
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.16.0'
+
+dependencies:
   flutter:
     sdk: flutter
 
-  # Firebase - Downgraded versions for Flutter 3.16.9 compatibility
   firebase_core: ^3.3.0
   firebase_auth: ^5.1.0
   cloud_firestore: ^5.1.0
   firebase_messaging: ^15.0.0
-
-  # UI & Utilities
   flutter_svg: ^2.0.10+1
   shared_preferences: ^2.2.3
   image_picker: ^0.8.9
   path_provider: ^2.1.3
   path: ^1.9.0
-
-  # Database
   sqflite: ^2.2.0
-
-  # QR & Scanner
   qr_flutter: ^4.1.0
   mobile_scanner: ^4.0.1
-
-  # Web & URLs
   webview_flutter: ^4.4.0
   url_launcher: ^6.2.6
-
-  # Charts & Analytics
   fl_chart: ^0.68.0
   intl: ^0.19.0
-
-  # PDF & Sharing
   printing: ^5.12.0
   share_plus: ^7.2.2
-
-  # Utilities
   async: ^2.11.0
   cupertino_icons: ^1.0.8
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/logo/
