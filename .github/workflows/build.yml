@@ -12,49 +12,29 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Java
-      uses: actions/setup-java@v4
-      with:
-        java-version: '17'
-        distribution: 'temurin'
-    
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
         flutter-version: '3.22.0'
-        channel: 'stable'
     
-    - name: Get dependencies
-      run: flutter pub get
+    - run: flutter pub get
     
-    - name: Build APK
-      run: flutter build apk --release
+    - name: Build with verbose output
+      run: flutter build apk --release --verbose 2>&1 | tee build_log.txt
     
-    - name: Debug - List all directories
+    - name: Check build directory
       run: |
-        echo "=== Current directory ==="
-        pwd
+        echo "=== Checking directories ==="
+        ls -la build/app/outputs/ 2>/dev/null || echo "No outputs directory"
         echo ""
-        echo "=== Directory structure ==="
-        ls -la
+        echo "=== Searching for APK files ==="
+        find . -name "*.apk" 2>/dev/null
         echo ""
-        echo "=== build/app/outputs ==="
-        ls -la build/app/outputs/ || echo "Not found"
-        echo ""
-        echo "=== flutter-apk directory ==="
-        ls -la build/app/outputs/flutter-apk/ || echo "Not found"
-        echo ""
-        echo "=== Search for any APK ==="
-        find . -name "*.apk" 2>/dev/null || echo "No APK found"
-        echo ""
-        echo "=== Search in android folder ==="
-        find android -name "*.apk" 2>/dev/null || echo "No APK found"
+        echo "=== Build log tail ==="
+        tail -100 build_log.txt 2>/dev/null || echo "No log file"
     
-    - name: Upload APK
+    - name: Upload APK if found
       uses: actions/upload-artifact@v4
       with:
         name: campus-clock-app
-        path: |
-          build/app/outputs/flutter-apk/app-release.apk
-          android/app/build/outputs/apk/release/*.apk
-          **/app-release.apk
+        path: "**/*.apk"
