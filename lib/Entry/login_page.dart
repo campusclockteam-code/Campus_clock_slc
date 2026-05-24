@@ -1,11 +1,11 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../Animation/animated_background.dart';
-import '../Service/fcm_service.dart';
+import '../service/fcm_service.dart';
 import 'signup_page.dart';
 
 class LoginPage extends StatefulWidget {
@@ -119,7 +119,7 @@ class _LoginPageState extends State<LoginPage> {
 
       Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
 
-      // âœ… FIX: Check admin FIRST - it overrides everything
+      // ✅ FIX: Check admin FIRST - it overrides everything
       bool isAdmin = userData['isAdmin'] == true ||
           email.toLowerCase() == 'surajncc2006@gmail.com';
 
@@ -186,7 +186,7 @@ class _LoginPageState extends State<LoginPage> {
 
       // Show welcome back notification
       FCMService.showCustomNotification(
-        title: 'Welcome Back! ðŸ‘‹',
+        title: 'Welcome Back! 👋',
         body: 'Good to see you again, $displayName!',
         context: context,
       );
@@ -195,7 +195,7 @@ class _LoginPageState extends State<LoginPage> {
       await Future.delayed(const Duration(milliseconds: 1500));
 
       if (mounted) {
-        // âœ… Navigate based on role
+        // ✅ Navigate based on role
         if (isAdmin) {
           Navigator.of(context).pushNamedAndRemoveUntil('/admin', (route) => false);
         } else {
@@ -255,7 +255,7 @@ class _LoginPageState extends State<LoginPage> {
       await prefs.remove('profile_photo_url');
 
       FCMService.showCustomNotification(
-        title: 'Guest Mode ðŸ‘¤',
+        title: 'Guest Mode 👤',
         body: 'You are browsing as a guest. Sign up for full access!',
         context: context,
       );

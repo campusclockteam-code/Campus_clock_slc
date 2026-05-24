@@ -1,4 +1,4 @@
-﻿// lib/Home/Home_page.dart
+// lib/Home/Home_page.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -8,7 +8,7 @@ import 'package:path_provider/path_provider.dart';
 import 'dart:io';
 import '../Student/student_qr_screen.dart';
 import '../basic_feture/ProfileScreen.dart';
-import '../Service/notifications_screen.dart';
+import '../service/notifications_screen.dart';
 import '../Teacher/teacher_attendance_screen.dart';
 import '../basic_feture/SettingsScreen.dart';
 
@@ -52,7 +52,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _checkAdminStatus() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null && user.email?.toLowerCase() == 'surajncc2006@gmail.com') {
-      print('âœ… Setting admin status for: ${user.email}');
+      print('✅ Setting admin status for: ${user.email}');
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('is_admin', true);
       await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
@@ -66,7 +66,7 @@ class _HomePageState extends State<HomePage> {
         _isAdmin = true;
       });
     } else {
-      print('âŒ Not admin. User: ${user?.email}');
+      print('❌ Not admin. User: ${user?.email}');
     }
   }
 

@@ -1,11 +1,11 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:campus_clock_slc/Service/fcm_service.dart';
+import 'package:campus_clock_slc/service/fcm_service.dart';
 import 'Home/splash_screen.dart';
 import 'Entry/login_page.dart';
-import 'Service/notifications_screen.dart';
+import 'service/notifications_screen.dart';
 import 'Entry/signup_page.dart';
 import 'Home/Home_page.dart';
 import 'Admin/AdminScreen.dart';
@@ -20,10 +20,10 @@ void main() async {
   await FCMService.initialize();
   // Get FCM token for debugging
   String? token = await FirebaseMessaging.instance.getToken();
-  print('âœ… FCM Token: $token');
+  print('✅ FCM Token: $token');
   // Subscribe to general topics
   await FirebaseMessaging.instance.subscribeToTopic('all_users');
-  print('âœ… Subscribed to all_users topic');
+  print('✅ Subscribed to all_users topic');
 
   runApp(const MyApp());
 }

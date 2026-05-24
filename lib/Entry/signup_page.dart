@@ -1,11 +1,11 @@
-﻿import 'dart:async';
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_svg/flutter_svg.dart';
 import '../Animation/animated_background.dart';
-import '../Service/fcm_service.dart';
+import '../service/fcm_service.dart';
 import 'login_page.dart';
 
 class SignupPage extends StatefulWidget {
@@ -300,9 +300,9 @@ class _SignupPageState extends State<SignupPage> {
         await prefs.remove('teacher_name');
       }
 
-      // ðŸŽ‰ Show success notification
+      // 🎉 Show success notification
       FCMService.showCustomNotification(
-        title: 'Welcome to Campus Clock! ðŸŽ‰',
+        title: 'Welcome to Campus Clock! 🎉',
         body: 'Your account has been created successfully, $name!',
         context: context,
       );
@@ -432,7 +432,7 @@ class _SignupPageState extends State<SignupPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text('âœ“ Roll number verified', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
+                            const Text('✓ Roll number verified', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.green)),
                             const SizedBox(height: 4),
                             Text('Name: ${_fetchedStudentData!['name'] ?? 'N/A'}'),
                             Text('Course: ${_fetchedStudentData!['course'] ?? 'N/A'}'),
