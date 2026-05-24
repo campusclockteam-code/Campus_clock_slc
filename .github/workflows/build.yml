@@ -30,19 +30,31 @@ jobs:
     - name: Build APK
       run: flutter build apk --release
     
-    - name: List build output
+    - name: Debug - List all directories
       run: |
-        echo "Listing build directory:"
-        ls -la build/app/outputs/flutter-apk/ || echo "Directory not found"
+        echo "=== Current directory ==="
+        pwd
         echo ""
-        echo "Searching for APK files:"
-        find . -name "*.apk" -type f 2>/dev/null || echo "No APK found"
+        echo "=== Directory structure ==="
+        ls -la
+        echo ""
+        echo "=== build/app/outputs ==="
+        ls -la build/app/outputs/ || echo "Not found"
+        echo ""
+        echo "=== flutter-apk directory ==="
+        ls -la build/app/outputs/flutter-apk/ || echo "Not found"
+        echo ""
+        echo "=== Search for any APK ==="
+        find . -name "*.apk" 2>/dev/null || echo "No APK found"
+        echo ""
+        echo "=== Search in android folder ==="
+        find android -name "*.apk" 2>/dev/null || echo "No APK found"
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: campus-clock-app
         path: |
-          build/app/outputs/flutter-apk/*.apk
-          build/app/outputs/apk/**/*.apk
-          **/*.apk
+          build/app/outputs/flutter-apk/app-release.apk
+          android/app/build/outputs/apk/release/*.apk
+          **/app-release.apk
