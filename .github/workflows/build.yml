@@ -21,20 +21,24 @@ jobs:
           flutter-version: '3.22.0'
           channel: 'stable'
       
-      - name: Debug - List files
+      - name: Clean and get dependencies
         run: |
-          echo "Checking lib structure:"
-          ls -la lib/
-          echo ""
-          echo "Checking for service folder:"
-          ls -la lib/service/ || echo "service folder not found"
-          ls -la lib/Service/ || echo "Service folder not found"
+          flutter clean
+          flutter pub get
       
-      - run: flutter clean
-      - run: flutter pub get
-      - run: flutter build apk --release
+      - name: Build APK
+        run: flutter build apk --release --verbose
       
-      - uses: actions/upload-artifact@v4
+      - name: List build output
+        run: |
+          echo "Checking for APK files..."
+          find build -name "*.apk" 2>/dev/null || echo "No APK found"
+          ls -la build/app/outputs/flutter-apk/ 2>/dev/null || echo "Directory not found"
+      
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
         with:
           name: campus-clock-app
-          path: build/app/outputs/flutter-apk/app-release.apk
+          path: |
+            build/app/outputs/flutter-apk/*.apk
+            build/app/outputs/apk/**/*.apk
