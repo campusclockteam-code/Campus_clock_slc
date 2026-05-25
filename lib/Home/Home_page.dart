@@ -116,7 +116,7 @@ class _HomePageState extends State<HomePage> {
       } else {
         _userRole = 'Student';
       }
-      
+
       _rollNumber = prefs.getString('roll_number');
       _teacherName = prefs.getString('teacher_name');
       _selectedCourse = prefs.getString('selected_course');
@@ -183,31 +183,32 @@ class _HomePageState extends State<HomePage> {
               _isAdmin = true;
               _userRole = 'Admin';
             }
-            
-            // Update SharedPreferences with latest data
-            if (data?['rollNumber'] != null) {
-              await prefs.setString('roll_number', data?['rollNumber']);
-            }
-            if (data?['course'] != null) {
-              await prefs.setString('selected_course', data?['course']);
-            }
-            if (data?['year'] != null) {
-              await prefs.setString('selected_year', data?['year']);
-            }
-            if (data?['semester'] != null) {
-              await prefs.setInt('selected_semester', _parseSemesterNumber(data?['semester']));
-            }
-            if (data?['section'] != null) {
-              await prefs.setString('selected_section', data?['section']);
-            }
-            if (data?['gender'] != null) {
-              await prefs.setString('student_gender', data?['gender']);
-            }
-            if (data?['displayName'] != null) {
-              await prefs.setString('student_name', data?['displayName']);
-              await prefs.setString('user_name', data?['displayName']);
-            }
           });
+
+          // Update SharedPreferences with latest data (No await needed here)
+          if (data?['rollNumber'] != null) {
+            prefs.setString('roll_number', data?['rollNumber']);
+          }
+          if (data?['course'] != null) {
+            prefs.setString('selected_course', data?['course']);
+          }
+          if (data?['year'] != null) {
+            prefs.setString('selected_year', data?['year']);
+          }
+          if (data?['semester'] != null) {
+            prefs.setInt(
+                'selected_semester', _parseSemesterNumber(data?['semester']));
+          }
+          if (data?['section'] != null) {
+            prefs.setString('selected_section', data?['section']);
+          }
+          if (data?['gender'] != null) {
+            prefs.setString('student_gender', data?['gender']);
+          }
+          if (data?['displayName'] != null) {
+            prefs.setString('student_name', data?['displayName']);
+            prefs.setString('user_name', data?['displayName']);
+          }
         }
       } catch (e) {
         print('Error loading Firebase data: $e');
@@ -222,14 +223,11 @@ class _HomePageState extends State<HomePage> {
     print('Role: $_userRole');
     print('Admin: $_isAdmin');
     print('Student Name: $_studentName');
-    print('Teacher Name: $_teacherName');
     print('Roll Number: $_rollNumber');
     print('Course: $_selectedCourse');
     print('Year: $_selectedYear');
     print('Semester: $_selectedSemester');
     print('Section: $_selectedSection');
-    print('Gender: $_studentGender');
-    print('Email: $_userEmail');
     print('===========================');
   }
 
@@ -636,7 +634,8 @@ class _HomePageState extends State<HomePage> {
                   return Stack(
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.notifications_none, color: Colors.white),
+                        icon: const Icon(Icons.notifications_none,
+                            color: Colors.white),
                         onPressed: () {
                           Navigator.push(
                             context,
@@ -690,10 +689,10 @@ class _HomePageState extends State<HomePage> {
                       child: _getProfileImageProvider() == null
                           ? Text(
                               (_studentName?.isNotEmpty == true
-                                  ? _studentName!.substring(0, 1)
-                                  : _teacherName?.isNotEmpty == true
-                                  ? _teacherName!.substring(0, 1)
-                                  : 'U')
+                                      ? _studentName!.substring(0, 1)
+                                      : _teacherName?.isNotEmpty == true
+                                          ? _teacherName!.substring(0, 1)
+                                          : 'U')
                                   .toUpperCase(),
                               style: const TextStyle(
                                 color: Colors.white,
@@ -756,7 +755,8 @@ class _HomePageState extends State<HomePage> {
             children: [
               if (_userEmail != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
@@ -769,7 +769,8 @@ class _HomePageState extends State<HomePage> {
                       Flexible(
                         child: Text(
                           _userEmail!,
-                          style: const TextStyle(fontSize: 12, color: Colors.white),
+                          style: const TextStyle(
+                              fontSize: 12, color: Colors.white),
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
@@ -778,7 +779,8 @@ class _HomePageState extends State<HomePage> {
                 ),
               if (_rollNumber != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
@@ -790,14 +792,16 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(width: 6),
                       Text(
                         'Roll: $_rollNumber',
-                        style: const TextStyle(fontSize: 12, color: Colors.white),
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.white),
                       ),
                     ],
                   ),
                 ),
               if (_selectedCourse != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
@@ -809,14 +813,16 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(width: 6),
                       Text(
                         _selectedCourse!,
-                        style: const TextStyle(fontSize: 12, color: Colors.white),
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.white),
                       ),
                     ],
                   ),
                 ),
               if (_selectedSemester != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
@@ -828,14 +834,16 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(width: 6),
                       Text(
                         'Sem $_selectedSemester',
-                        style: const TextStyle(fontSize: 12, color: Colors.white),
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.white),
                       ),
                     ],
                   ),
                 ),
               if (_selectedSection != null)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white.withOpacity(0.15),
                     borderRadius: BorderRadius.circular(20),
@@ -847,14 +855,16 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(width: 6),
                       Text(
                         'Sec: $_selectedSection',
-                        style: const TextStyle(fontSize: 12, color: Colors.white),
+                        style:
+                            const TextStyle(fontSize: 12, color: Colors.white),
                       ),
                     ],
                   ),
                 ),
               if (_isAdmin)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.red.withOpacity(0.3),
                     borderRadius: BorderRadius.circular(20),
@@ -862,7 +872,8 @@ class _HomePageState extends State<HomePage> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.admin_panel_settings, size: 14, color: Colors.red.shade100),
+                      Icon(Icons.admin_panel_settings,
+                          size: 14, color: Colors.red.shade100),
                       const SizedBox(width: 6),
                       Text(
                         'Admin',
@@ -903,7 +914,8 @@ class _HomePageState extends State<HomePage> {
     final screenHeight = MediaQuery.of(context).size.height;
 
     return Container(
-      width: isMobile ? MediaQuery.of(context).size.width * 0.85 : _sidebarWidth,
+      width:
+          isMobile ? MediaQuery.of(context).size.width * 0.85 : _sidebarWidth,
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
@@ -948,7 +960,8 @@ class _HomePageState extends State<HomePage> {
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       border: Border.all(color: Colors.white, width: 3),
-                      gradient: (_selectedProfileImage == null && (_userPhotoUrl == null || _userPhotoUrl!.isEmpty))
+                      gradient: (_selectedProfileImage == null &&
+                              (_userPhotoUrl == null || _userPhotoUrl!.isEmpty))
                           ? LinearGradient(
                               colors: [
                                 Colors.blue.shade300,
@@ -960,14 +973,15 @@ class _HomePageState extends State<HomePage> {
                           : null,
                       image: _getSidebarProfileDecorationImage(),
                     ),
-                    child: (_selectedProfileImage == null && (_userPhotoUrl == null || _userPhotoUrl!.isEmpty))
+                    child: (_selectedProfileImage == null &&
+                            (_userPhotoUrl == null || _userPhotoUrl!.isEmpty))
                         ? Center(
                             child: Text(
                               (_studentName?.isNotEmpty == true
-                                  ? _studentName!.substring(0, 1)
-                                  : _teacherName?.isNotEmpty == true
-                                  ? _teacherName!.substring(0, 1)
-                                  : 'U')
+                                      ? _studentName!.substring(0, 1)
+                                      : _teacherName?.isNotEmpty == true
+                                          ? _teacherName!.substring(0, 1)
+                                          : 'U')
                                   .toUpperCase(),
                               style: TextStyle(
                                 fontSize: isMobile ? 28 : 36,
@@ -1038,7 +1052,8 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -1150,7 +1165,8 @@ class _HomePageState extends State<HomePage> {
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.red.shade50,
                           foregroundColor: Colors.red.shade700,
-                          padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 16, horizontal: 20),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
                             side: BorderSide(color: Colors.red.shade200),
@@ -1261,7 +1277,8 @@ class _HomePageState extends State<HomePage> {
                     ),
                   ),
                 ),
-                Icon(Icons.chevron_right, size: 20, color: Colors.grey.shade400),
+                Icon(Icons.chevron_right,
+                    size: 20, color: Colors.grey.shade400),
               ],
             ),
           ),
