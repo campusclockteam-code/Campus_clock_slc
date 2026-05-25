@@ -30,29 +30,30 @@ jobs:
     - name: Build APK
       run: flutter build apk --release
     
-    - name: List all files
+    - name: Find APK
+      id: find_apk
       run: |
-        echo "=== Current directory ==="
-        pwd
-        echo ""
-        echo "=== Build directory contents ==="
-        find build -type f 2>/dev/null | head -50
-        echo ""
-        echo "=== Search for APK files ==="
-        find . -name "*.apk" -type f
-        echo ""
-        echo "=== Check standard APK location ==="
-        ls -la build/app/outputs/flutter-apk/ || echo "Directory not found"
-        echo ""
-        echo "=== Check release APK location ==="
-        ls -la build/app/outputs/apk/release/ || echo "Directory not found"
+        # Try multiple possible locations
+        if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
+          echo "apk_path=build/app/outputs/flutter-apk/app-release.apk" >> $GITHUB_OUTPUT
+          echo "Found APK at standard location"
+        elif [ -f "build/app/outputs/apk/release/app-release.apk" ]; then
+          echo "apk_path=build/app/outputs/apk/release/app-release.apk" >> $GITHUB_OUTPUT
+          echo "Found APK at release location"
+        else
+          # Search for any APK
+          APK_FILE=$(find . -name "*.apk" -type f | head -1)
+          if [ -n "$APK_FILE" ]; then
+            echo "apk_path=$APK_FILE" >> $GITHUB_OUTPUT
+            echo "Found APK at: $APK_FILE"
+          else
+            echo "No APK found!"
+            exit 1
+          fi
+        fi
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: campus-clock-app
-        path: |
-          build/app/outputs/flutter-apk/*.apk
-          build/app/outputs/apk/release/*.apk
-          **/app-release.apk
-          **/app-debug.apk
+        path: ${{ steps.find_apk.outputs.apk_path }}
