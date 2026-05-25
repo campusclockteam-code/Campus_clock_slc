@@ -27,33 +27,15 @@ jobs:
     - name: Get dependencies
       run: flutter pub get
     
-    - name: Build APK
-      run: flutter build apk --release
-    
-    - name: Find APK
-      id: find_apk
+    - name: Build APK with Gradle
       run: |
-        # Try multiple possible locations
-        if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
-          echo "apk_path=build/app/outputs/flutter-apk/app-release.apk" >> $GITHUB_OUTPUT
-          echo "Found APK at standard location"
-        elif [ -f "build/app/outputs/apk/release/app-release.apk" ]; then
-          echo "apk_path=build/app/outputs/apk/release/app-release.apk" >> $GITHUB_OUTPUT
-          echo "Found APK at release location"
-        else
-          # Search for any APK
-          APK_FILE=$(find . -name "*.apk" -type f | head -1)
-          if [ -n "$APK_FILE" ]; then
-            echo "apk_path=$APK_FILE" >> $GITHUB_OUTPUT
-            echo "Found APK at: $APK_FILE"
-          else
-            echo "No APK found!"
-            exit 1
-          fi
-        fi
+        cd android
+        chmod +x gradlew
+        ./gradlew assembleRelease
+        cd ..
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: campus-clock-app
-        path: ${{ steps.find_apk.outputs.apk_path }}
+        path: android/app/build/outputs/apk/release/*.apk
