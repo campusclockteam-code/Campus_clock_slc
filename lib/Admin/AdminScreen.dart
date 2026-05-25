@@ -13,11 +13,11 @@ class AdminScreen extends StatefulWidget {
   State<AdminScreen> createState() => _AdminScreenState();
 }
 
-class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin {
+class _AdminScreenState extends State<AdminScreen>
+    with TickerProviderStateMixin {
   int _selectedTab = 0;
   String _searchQuery = '';
   String _selectedFilter = 'all';
-  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final ScrollController _scrollController = ScrollController();
   late TabController _tabController;
 
@@ -65,7 +65,8 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       SnackBar(
         content: Row(
           children: [
-            Icon(isError ? Icons.error_outline : Icons.check_circle, color: Colors.white, size: 20),
+            Icon(isError ? Icons.error_outline : Icons.check_circle,
+                color: Colors.white, size: 20),
             const SizedBox(width: 8),
             Expanded(child: Text(message)),
           ],
@@ -118,28 +119,30 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   }
 
   // ===============================
-  // 🆕 AUTO SEMESTER UPDATE LOGIC
+  // AUTO SEMESTER UPDATE LOGIC
   // ===============================
   Future<void> _autoUpdateSemester() async {
-    // Confirmation dialog
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Auto Update Semester'),
         content: const Text(
           'This will automatically advance the semester for all students based on Delhi University academic calendar.\n\n'
-              'Semester will increment by 1. If semester exceeds 6, year will increment and semester resets to 1.\n\n'
-              'A log entry will be created and notifications can be sent. Proceed?',
+          'Semester will increment by 1. If semester exceeds 6, year will increment and semester resets to 1.\n\n'
+          'A log entry will be created and notifications can be sent. Proceed?',
         ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), child: const Text('Proceed')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Proceed')),
         ],
       ),
     );
     if (confirm != true) return;
 
-    // Show progress dialog
     showDialog(
       context: context,
       barrierDismissible: false,
@@ -156,7 +159,8 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     );
 
     try {
-      final studentsSnapshot = await FirebaseFirestore.instance.collection('students').get();
+      final studentsSnapshot =
+          await FirebaseFirestore.instance.collection('students').get();
       int updatedCount = 0;
       final batch = FirebaseFirestore.instance.batch();
 
@@ -165,28 +169,23 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
         String currentSemester = data['semester'] ?? 'Semester 1';
         String currentYear = data['year'] ?? '1 Year';
 
-        // Parse semester number (e.g., "Semester 1" -> 1)
         int semesterNum = int.tryParse(currentSemester.split(' ')[1]) ?? 1;
         int newSemesterNum = semesterNum + 1;
 
         String newSemester = 'Semester $newSemesterNum';
         String newYear = currentYear;
 
-        // If semester > 6, increment year and reset semester to 1
         if (newSemesterNum > 6) {
           newSemesterNum = 1;
           newSemester = 'Semester 1';
-          // Increment year: "1 Year" -> "2 Year", etc.
           int yearNum = int.tryParse(currentYear.split(' ')[0]) ?? 1;
           if (yearNum < 3) {
             newYear = '${yearNum + 1} Year';
           } else {
-            // Already final year, keep as is
             newYear = currentYear;
           }
         }
 
-        // Only update if changed
         if (newSemester != currentSemester || newYear != currentYear) {
           batch.update(doc.reference, {
             'semester': newSemester,
@@ -200,7 +199,6 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
 
       await batch.commit();
 
-      // Log the operation
       await FirebaseFirestore.instance.collection('admin_audit_logs').add({
         'action': 'auto_semester_update',
         'timestamp': FieldValue.serverTimestamp(),
@@ -209,11 +207,10 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
         'details': 'Semester auto-update performed for all students.',
       });
 
-      Navigator.pop(context); // Close progress dialog
-      _showSnackBar('✅ Semester update complete! $updatedCount students updated.');
+      Navigator.pop(context);
+      _showSnackBar(
+          '✅ Semester update complete! $updatedCount students updated.');
       _refreshDashboard();
-
-      // Optionally send notification to students about semester change
       await _sendSemesterUpdateNotification(updatedCount);
     } catch (e) {
       Navigator.pop(context);
@@ -223,31 +220,22 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
 
   Future<void> _sendSemesterUpdateNotification(int studentCount) async {
     try {
-      final adminToken = await FirebaseMessaging.instance.getToken();
-      final message = {
-        'title': 'Semester Updated',
-        'body': 'Your semester has been automatically updated according to DU academic calendar.',
-        'data': {'type': 'semester_update'},
-      };
-      // In a real app, you'd send to all student tokens via cloud function.
-      // Here we just record in notifications collection.
       await FirebaseFirestore.instance.collection('notifications').add({
-        'title': message['title'],
-        'body': message['body'],
+        'title': 'Semester Updated',
+        'body':
+            'Your semester has been automatically updated according to DU academic calendar.',
         'timestamp': FieldValue.serverTimestamp(),
         'targetGroup': 'students',
         'sentBy': FirebaseAuth.instance.currentUser?.uid,
       });
-      print('Semester update notification recorded.');
     } catch (e) {
       print('Error recording notification: $e');
     }
   }
 
   // ===============================
-  // EXISTING HELPER METHODS
+  // DATA MANAGEMENT HELPERS
   // ===============================
-
   Future<void> _showTextPasteDialog() async {
     await showDialog(
       context: context,
@@ -258,9 +246,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
         onBatchComplete: (count) {
           _showSnackBar('✅ Successfully added $count students');
           _refreshDashboard();
-          if (_showStudentListView) {
-            setState(() {});
-          }
+          if (_showStudentListView) setState(() {});
         },
       ),
     );
@@ -278,21 +264,21 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
           child: courses.isEmpty
               ? const Center(child: Text('No courses found'))
               : ListView.builder(
-            itemCount: courses.length,
-            itemBuilder: (context, index) {
-              final course = courses[index];
-              return ListTile(
-                title: Text(course),
-                onTap: () {
-                  Navigator.pop(context);
-                  setState(() {
-                    _selectedViewCourse = course;
-                    _showStudentListView = true;
-                  });
-                },
-              );
-            },
-          ),
+                  itemCount: courses.length,
+                  itemBuilder: (context, index) {
+                    final course = courses[index];
+                    return ListTile(
+                      title: Text(course),
+                      onTap: () {
+                        Navigator.pop(context);
+                        setState(() {
+                          _selectedViewCourse = course;
+                          _showStudentListView = true;
+                        });
+                      },
+                    );
+                  },
+                ),
         ),
         actions: [
           TextButton(
@@ -305,7 +291,8 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   }
 
   Future<List<String>> _getAllCourses() async {
-    final snapshot = await FirebaseFirestore.instance.collection('students').get();
+    final snapshot =
+        await FirebaseFirestore.instance.collection('students').get();
     final courses = <String>{};
     for (var doc in snapshot.docs) {
       final data = doc.data();
@@ -320,21 +307,43 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Row(children: [Icon(Icons.warning, color: Colors.red), SizedBox(width: 8), Text('Delete All Students')]),
-        content: const Text('⚠️ WARNING: This will delete ALL student data from the database.\n\nThis action cannot be undone. Are you absolutely sure?'),
+        title: const Row(children: [
+          Icon(Icons.warning, color: Colors.red),
+          SizedBox(width: 8),
+          Text('Delete All Students')
+        ]),
+        content: const Text(
+            '⚠️ WARNING: This will delete ALL student data from the database.\n\nThis action cannot be undone. Are you absolutely sure?'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('Delete All', style: TextStyle(color: Colors.white))),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child: const Text('Delete All',
+                  style: TextStyle(color: Colors.white))),
         ],
       ),
     );
     if (confirmed == true) {
-      showDialog(context: context, barrierDismissible: false, builder: (context) => const AlertDialog(content: Column(mainAxisSize: MainAxisSize.min, children: [CircularProgressIndicator(), SizedBox(height: 16), Text('Deleting all student data...')])));
+      showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const AlertDialog(
+                  content: Column(mainAxisSize: MainAxisSize.min, children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Deleting all student data...')
+              ])));
       try {
         int deleted = await _deleteAllStudentsFromFirestore();
         Navigator.pop(context);
         _showSnackBar('✅ Deleted $deleted student records');
-        setState(() { _showStudentListView = false; _selectedViewCourse = null; });
+        setState(() {
+          _showStudentListView = false;
+          _selectedViewCourse = null;
+        });
         _refreshDashboard();
       } catch (e) {
         Navigator.pop(context);
@@ -351,7 +360,13 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
         content: Column(mainAxisSize: MainAxisSize.min, children: [
           const Text('Choose the year of students to delete:'),
           const SizedBox(height: 16),
-          Wrap(spacing: 8, children: ['1 Year', '2 Year', '3 Year'].map((year) => ElevatedButton(onPressed: () => Navigator.pop(context, year), child: Text(year))).toList()),
+          Wrap(
+              spacing: 8,
+              children: ['1 Year', '2 Year', '3 Year']
+                  .map((year) => ElevatedButton(
+                      onPressed: () => Navigator.pop(context, year),
+                      child: Text(year)))
+                  .toList()),
         ]),
       ),
     );
@@ -360,20 +375,38 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Confirm Delete'),
-        content: Text('Delete all $selectedYear students? This cannot be undone.'),
+        content:
+            Text('Delete all $selectedYear students? This cannot be undone.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Navigator.pop(context, true), style: ElevatedButton.styleFrom(backgroundColor: Colors.red), child: const Text('Delete', style: TextStyle(color: Colors.white))),
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          ElevatedButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+              child:
+                  const Text('Delete', style: TextStyle(color: Colors.white))),
         ],
       ),
     );
     if (confirmed == true) {
-      showDialog(context: context, barrierDismissible: false, builder: (context) => const AlertDialog(content: Column(mainAxisSize: MainAxisSize.min, children: [CircularProgressIndicator(), SizedBox(height: 16), Text('Deleting students...')])));
+      showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const AlertDialog(
+                  content: Column(mainAxisSize: MainAxisSize.min, children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text('Deleting students...')
+              ])));
       try {
         int deleted = await _deleteStudentsByYearFromFirestore(selectedYear);
         Navigator.pop(context);
         _showSnackBar('✅ Deleted $deleted $selectedYear students');
-        setState(() { _showStudentListView = false; _selectedViewCourse = null; });
+        setState(() {
+          _showStudentListView = false;
+          _selectedViewCourse = null;
+        });
         _refreshDashboard();
       } catch (e) {
         Navigator.pop(context);
@@ -384,7 +417,10 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
 
   Future<void> _deleteSingleStudent(String studentId) async {
     try {
-      await FirebaseFirestore.instance.collection('students').doc(studentId).delete();
+      await FirebaseFirestore.instance
+          .collection('students')
+          .doc(studentId)
+          .delete();
       _showSnackBar('✅ Student deleted successfully');
       _refreshDashboard();
       if (_showStudentListView) setState(() {});
@@ -394,7 +430,8 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   }
 
   Future<int> _deleteAllStudentsFromFirestore() async {
-    final snapshot = await FirebaseFirestore.instance.collection('students').get();
+    final snapshot =
+        await FirebaseFirestore.instance.collection('students').get();
     final batch = FirebaseFirestore.instance.batch();
     for (var doc in snapshot.docs) batch.delete(doc.reference);
     await batch.commit();
@@ -402,7 +439,10 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   }
 
   Future<int> _deleteStudentsByYearFromFirestore(String year) async {
-    final snapshot = await FirebaseFirestore.instance.collection('students').where('year', isEqualTo: year).get();
+    final snapshot = await FirebaseFirestore.instance
+        .collection('students')
+        .where('year', isEqualTo: year)
+        .get();
     final batch = FirebaseFirestore.instance.batch();
     for (var doc in snapshot.docs) batch.delete(doc.reference);
     await batch.commit();
@@ -410,20 +450,26 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   }
 
   Stream<QuerySnapshot> _getStudentsByCourse(String course) {
-    return FirebaseFirestore.instance.collection('students').where('course', isEqualTo: course).snapshots();
+    return FirebaseFirestore.instance
+        .collection('students')
+        .where('course', isEqualTo: course)
+        .snapshots();
   }
 
   Future<void> _verifyAdminAccess() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) {
-      WidgetsBinding.instance.addPostFrameCallback((_) { if (mounted) Navigator.pushReplacementNamed(context, '/login'); });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) Navigator.pushReplacementNamed(context, '/login');
+      });
       return;
     }
     if (user.email?.toLowerCase() != 'surajncc2006@gmail.com') {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) {
           Navigator.pushReplacementNamed(context, '/home');
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Admin access restricted')));
+          ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Admin access restricted')));
         }
       });
       return;
@@ -444,7 +490,9 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
 
   void _handleTabChange() {
     if (!_tabController.indexIsChanging) {
-      setState(() { _selectedTab = _tabController.index; });
+      setState(() {
+        _selectedTab = _tabController.index;
+      });
     }
   }
 
@@ -462,11 +510,18 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     try {
       await Future.delayed(const Duration(milliseconds: 100));
       _dashboardCache = _getMinimalDashboardData();
-      WidgetsBinding.instance.addPostFrameCallback((_) { _precacheDashboardData(); });
-      setState(() { _isLoading = false; });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _precacheDashboardData();
+      });
+      setState(() {
+        _isLoading = false;
+      });
     } catch (e) {
       print('Error initializing data: $e');
-      setState(() { _dashboardCache = _getMinimalDashboardData(); _isLoading = false; });
+      setState(() {
+        _dashboardCache = _getMinimalDashboardData();
+        _isLoading = false;
+      });
     }
   }
 
@@ -475,9 +530,16 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     try {
       _isCacheLoading = true;
       final data = await _loadDashboardData();
-      if (mounted) setState(() { _dashboardCache = data; _lastCacheUpdate = DateTime.now(); });
-    } catch (e) { print('Error pre-caching dashboard data: $e'); }
-    finally { _isCacheLoading = false; }
+      if (mounted)
+        setState(() {
+          _dashboardCache = data;
+          _lastCacheUpdate = DateTime.now();
+        });
+    } catch (e) {
+      print('Error pre-caching dashboard data: $e');
+    } finally {
+      _isCacheLoading = false;
+    }
   }
 
   Future<void> _setupFirebaseMessaging() async {
@@ -485,26 +547,49 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       await FirebaseMessaging.instance.requestPermission();
       String? token = await FirebaseMessaging.instance.getToken();
       print('Admin device token: $token');
-      FirebaseMessaging.onMessage.listen((RemoteMessage message) { print('Admin received message: ${message.notification?.title}'); });
-    } catch (e) { print('Error setting up FCM: $e'); }
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        print('Admin received message: ${message.notification?.title}');
+      });
+    } catch (e) {
+      print('Error setting up FCM: $e');
+    }
   }
 
   Future<Map<String, dynamic>> _loadDashboardData() async {
     try {
-      final usersSnapshot = await FirebaseFirestore.instance.collection('users').orderBy('lastLoginAt', descending: true).limit(20).get();
+      final usersSnapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .orderBy('lastLoginAt', descending: true)
+          .limit(20)
+          .get();
       final users = usersSnapshot.docs;
       int teachers = 0, students = 0, activeUsers = 0;
       for (var user in users) {
         final data = user.data() as Map<String, dynamic>;
-        if (data['role'] == 'teacher') teachers++;
+        if (data['role'] == 'teacher')
+          teachers++;
         else if (data['role'] == 'student') students++;
         final lastLogin = data['lastLoginAt'] as Timestamp?;
-        if (lastLogin != null && DateTime.now().difference(lastLogin.toDate()).inDays <= 7) activeUsers++;
+        if (lastLogin != null &&
+            DateTime.now().difference(lastLogin.toDate()).inDays <= 7)
+          activeUsers++;
       }
-      return {'users': users, 'teachers': teachers, 'students': students, 'activeUsers': activeUsers, 'total': users.length};
+      return {
+        'users': users,
+        'teachers': teachers,
+        'students': students,
+        'activeUsers': activeUsers,
+        'total': users.length
+      };
     } catch (e) {
       print('Error loading dashboard data: $e');
-      return {'users': [], 'teachers': 0, 'students': 0, 'activeUsers': 0, 'total': 0};
+      return {
+        'users': [],
+        'teachers': 0,
+        'students': 0,
+        'activeUsers': 0,
+        'total': 0
+      };
     }
   }
 
@@ -513,11 +598,24 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          SizedBox(width: 80, height: 80, child: CircularProgressIndicator.adaptive(valueColor: AlwaysStoppedAnimation<Color>(Theme.of(context).primaryColor), strokeWidth: 3)),
+          SizedBox(
+              width: 80,
+              height: 80,
+              child: CircularProgressIndicator.adaptive(
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                      Theme.of(context).primaryColor),
+                  strokeWidth: 3)),
           const SizedBox(height: 24),
-          Text('Loading Admin Dashboard', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: isDarkMode ? Colors.white : Colors.grey[800])),
+          Text('Loading Admin Dashboard',
+              style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w600,
+                  color: isDarkMode ? Colors.white : Colors.grey[800])),
           const SizedBox(height: 12),
-          Text('Please wait a moment', style: TextStyle(fontSize: 14, color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
+          Text('Please wait a moment',
+              style: TextStyle(
+                  fontSize: 14,
+                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
         ],
       ),
     );
@@ -535,77 +633,123 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       body: _isLoading
           ? _buildLoadingScreen(isDarkMode)
           : Column(
-        children: [
-          Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(begin: Alignment.topLeft, end: Alignment.bottomRight, colors: [primaryColor, primaryColor.withOpacity(0.8)]),
-              boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 10, offset: const Offset(0, 4))],
-            ),
-            child: SafeArea(
-              bottom: false,
-              child: Column(
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    child: Row(
+              children: [
+                Container(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [primaryColor, primaryColor.withOpacity(0.8)]),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.1),
+                          blurRadius: 10,
+                          offset: const Offset(0, 4))
+                    ],
+                  ),
+                  child: SafeArea(
+                    bottom: false,
+                    child: Column(
                       children: [
-                        CircleAvatar(backgroundColor: Colors.white.withOpacity(0.2), child: const Icon(Icons.person, color: Colors.white)),
-                        const SizedBox(width: 12),
-                        Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                          Text('Admin Dashboard', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: Colors.white)),
-                          Text('Welcome back', style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.8))),
-                        ]),
-                        const Spacer(),
-                        IconButton(onPressed: _refreshDashboard, icon: AnimatedIcon(icon: AnimatedIcons.menu_arrow, progress: _refreshAnimation), color: Colors.white),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 8),
+                          child: Row(
+                            children: [
+                              CircleAvatar(
+                                  backgroundColor:
+                                      Colors.white.withOpacity(0.2),
+                                  child: const Icon(Icons.person,
+                                      color: Colors.white)),
+                              const SizedBox(width: 12),
+                              Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Admin Dashboard',
+                                        style: TextStyle(
+                                            fontSize: 18,
+                                            fontWeight: FontWeight.w600,
+                                            color: Colors.white)),
+                                    Text('Welcome back',
+                                        style: TextStyle(
+                                            fontSize: 12,
+                                            color:
+                                                Colors.white.withOpacity(0.8))),
+                                  ]),
+                              const Spacer(),
+                              IconButton(
+                                  onPressed: _refreshDashboard,
+                                  icon: AnimatedIcon(
+                                      icon: AnimatedIcons.menu_arrow,
+                                      progress: _refreshAnimation),
+                                  color: Colors.white),
+                            ],
+                          ),
+                        ),
+                        TabBar(
+                          controller: _tabController,
+                          isScrollable: true,
+                          labelStyle: const TextStyle(
+                              fontSize: 12, fontWeight: FontWeight.w500),
+                          unselectedLabelStyle: const TextStyle(fontSize: 12),
+                          indicator: BoxDecoration(
+                              borderRadius: BorderRadius.circular(20),
+                              color: Colors.white.withOpacity(0.2)),
+                          indicatorSize: TabBarIndicatorSize.tab,
+                          tabs: const [
+                            Tab(
+                                icon: Icon(Icons.dashboard, size: 20),
+                                text: 'Dashboard'),
+                            Tab(
+                                icon: Icon(Icons.people_alt, size: 20),
+                                text: 'Users'),
+                            Tab(
+                                icon: Icon(Icons.message, size: 20),
+                                text: 'Messages'),
+                            Tab(
+                                icon: Icon(Icons.analytics, size: 20),
+                                text: 'Analytics'),
+                            Tab(
+                                icon: Icon(Icons.settings, size: 20),
+                                text: 'Settings'),
+                            Tab(
+                                icon: Icon(Icons.security, size: 20),
+                                text: 'Security'),
+                          ],
+                        ),
                       ],
                     ),
                   ),
-                  TabBar(
-                    controller: _tabController,
-                    isScrollable: true,
-                    labelStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
-                    unselectedLabelStyle: const TextStyle(fontSize: 12),
-                    indicator: BoxDecoration(borderRadius: BorderRadius.circular(20), color: Colors.white.withOpacity(0.2)),
-                    indicatorSize: TabBarIndicatorSize.tab,
-                    tabs: const [
-                      Tab(icon: Icon(Icons.dashboard, size: 20), text: 'Dashboard'),
-                      Tab(icon: Icon(Icons.people_alt, size: 20), text: 'Users'),
-                      Tab(icon: Icon(Icons.message, size: 20), text: 'Messages'),
-                      Tab(icon: Icon(Icons.analytics, size: 20), text: 'Analytics'),
-                      Tab(icon: Icon(Icons.settings, size: 20), text: 'Settings'),
-                      Tab(icon: Icon(Icons.security, size: 20), text: 'Security'),
-                    ],
+                ),
+                Expanded(
+                  child: Container(
+                    color: backgroundColor,
+                    child: TabBarView(
+                      controller: _tabController,
+                      children: [
+                        _buildDashboardTab(isDarkMode, cardColor),
+                        _buildUsersTab(isDarkMode, cardColor),
+                        _buildMessagesTab(isDarkMode, cardColor),
+                        _buildAnalyticsTab(isDarkMode, cardColor),
+                        _buildSettingsTab(isDarkMode, cardColor),
+                        _buildSecurityTab(isDarkMode, cardColor),
+                      ],
+                    ),
                   ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ),
-          Expanded(
-            child: Container(
-              color: backgroundColor,
-              child: TabBarView(
-                controller: _tabController,
-                children: [
-                  _buildDashboardTab(isDarkMode, cardColor),
-                  _buildUsersTab(isDarkMode, cardColor),
-                  _buildMessagesTab(isDarkMode, cardColor),
-                  _buildAnalyticsTab(isDarkMode, cardColor),
-                  _buildSettingsTab(isDarkMode, cardColor),
-                  _buildSecurityTab(isDarkMode, cardColor),
-                ],
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 
   // ========== DASHBOARD TAB ==========
   Widget _buildDashboardTab(bool isDarkMode, Color cardColor) {
-    final isCacheStale = _lastCacheUpdate == null || DateTime.now().difference(_lastCacheUpdate!).inMinutes > 5;
+    final isCacheStale = _lastCacheUpdate == null ||
+        DateTime.now().difference(_lastCacheUpdate!).inMinutes > 5;
     if (isCacheStale && !_isCacheLoading) {
-      WidgetsBinding.instance.addPostFrameCallback((_) { _precacheDashboardData(); });
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        _precacheDashboardData();
+      });
     }
 
     return RefreshIndicator(
@@ -622,10 +766,34 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
               children: [
-                _buildStatCard(title: 'Total Users', value: _dashboardCache['total']?.toString() ?? '0', icon: Icons.people, color: Colors.blue, isDarkMode: isDarkMode, cardColor: cardColor),
-                _buildStatCard(title: 'Teachers', value: _dashboardCache['teachers']?.toString() ?? '0', icon: Icons.school, color: Colors.green, isDarkMode: isDarkMode, cardColor: cardColor),
-                _buildStatCard(title: 'Students', value: _dashboardCache['students']?.toString() ?? '0', icon: Icons.group, color: Colors.orange, isDarkMode: isDarkMode, cardColor: cardColor),
-                _buildStatCard(title: 'Active', value: '${_dashboardCache['activeUsers'] ?? 0}', icon: Icons.check_circle, color: Colors.purple, isDarkMode: isDarkMode, cardColor: cardColor),
+                _buildStatCard(
+                    title: 'Total Users',
+                    value: _dashboardCache['total']?.toString() ?? '0',
+                    icon: Icons.people,
+                    color: Colors.blue,
+                    isDarkMode: isDarkMode,
+                    cardColor: cardColor),
+                _buildStatCard(
+                    title: 'Teachers',
+                    value: _dashboardCache['teachers']?.toString() ?? '0',
+                    icon: Icons.school,
+                    color: Colors.green,
+                    isDarkMode: isDarkMode,
+                    cardColor: cardColor),
+                _buildStatCard(
+                    title: 'Students',
+                    value: _dashboardCache['students']?.toString() ?? '0',
+                    icon: Icons.group,
+                    color: Colors.orange,
+                    isDarkMode: isDarkMode,
+                    cardColor: cardColor),
+                _buildStatCard(
+                    title: 'Active',
+                    value: '${_dashboardCache['activeUsers'] ?? 0}',
+                    icon: Icons.check_circle,
+                    color: Colors.purple,
+                    isDarkMode: isDarkMode,
+                    cardColor: cardColor),
               ],
             ),
             const SizedBox(height: 24),
@@ -639,10 +807,34 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
               children: [
-                _buildQuickActionCard(title: 'Send Message', icon: Icons.send, color: Colors.purple, onTap: _sendMessageToUsers, isDarkMode: isDarkMode, cardColor: cardColor),
-                _buildQuickActionCard(title: 'Export Data', icon: Icons.download, color: Colors.blue, onTap: _exportData, isDarkMode: isDarkMode, cardColor: cardColor),
-                _buildQuickActionCard(title: 'Announcement', icon: Icons.announcement, color: Colors.green, onTap: _sendAnnouncement, isDarkMode: isDarkMode, cardColor: cardColor),
-                _buildQuickActionCard(title: 'Security', icon: Icons.security, color: Colors.teal, onTap: _viewSecurityReport, isDarkMode: isDarkMode, cardColor: cardColor),
+                _buildQuickActionCard(
+                    title: 'Send Message',
+                    icon: Icons.send,
+                    color: Colors.purple,
+                    onTap: _sendMessageToUsers,
+                    isDarkMode: isDarkMode,
+                    cardColor: cardColor),
+                _buildQuickActionCard(
+                    title: 'Export Data',
+                    icon: Icons.download,
+                    color: Colors.blue,
+                    onTap: _exportData,
+                    isDarkMode: isDarkMode,
+                    cardColor: cardColor),
+                _buildQuickActionCard(
+                    title: 'Announcement',
+                    icon: Icons.announcement,
+                    color: Colors.green,
+                    onTap: _sendAnnouncement,
+                    isDarkMode: isDarkMode,
+                    cardColor: cardColor),
+                _buildQuickActionCard(
+                    title: 'Security',
+                    icon: Icons.security,
+                    color: Colors.teal,
+                    onTap: _viewSecurityReport,
+                    isDarkMode: isDarkMode,
+                    cardColor: cardColor),
               ],
             ),
             const SizedBox(height: 24),
@@ -655,19 +847,42 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildSectionHeader({required String title, required bool isDarkMode}) {
+  Widget _buildSectionHeader(
+      {required String title, required bool isDarkMode}) {
     return Row(
       children: [
-        Text(title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: isDarkMode ? Colors.white : Colors.grey[800])),
+        Text(title,
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+                color: isDarkMode ? Colors.white : Colors.grey[800])),
         const Spacer(),
-        if (_lastCacheUpdate != null) Text('Updated ${_formatTimeAgo(_lastCacheUpdate!)}', style: TextStyle(fontSize: 12, color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
+        if (_lastCacheUpdate != null)
+          Text('Updated ${_formatTimeAgo(_lastCacheUpdate!)}',
+              style: TextStyle(
+                  fontSize: 12,
+                  color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
       ],
     );
   }
 
-  Widget _buildStatCard({required String title, required String value, required IconData icon, required Color color, required bool isDarkMode, required Color cardColor}) {
+  Widget _buildStatCard(
+      {required String title,
+      required String value,
+      required IconData icon,
+      required Color color,
+      required bool isDarkMode,
+      required Color cardColor}) {
     return Container(
-      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))]),
+      decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4))
+          ]),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -675,20 +890,41 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
           children: [
             Row(
               children: [
-                Container(padding: const EdgeInsets.all(8), decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Icon(icon, color: color, size: 24)),
+                Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                        color: color.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12)),
+                    child: Icon(icon, color: color, size: 24)),
                 const Spacer(),
-                Text(value, style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700, color: isDarkMode ? Colors.white : Colors.grey[900])),
+                Text(value,
+                    style: TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        color: isDarkMode ? Colors.white : Colors.grey[900])),
               ],
             ),
             const SizedBox(height: 8),
-            Align(alignment: Alignment.centerLeft, child: Text(title, style: TextStyle(fontSize: 14, color: isDarkMode ? Colors.grey[400] : Colors.grey[600]))),
+            Align(
+                alignment: Alignment.centerLeft,
+                child: Text(title,
+                    style: TextStyle(
+                        fontSize: 14,
+                        color:
+                            isDarkMode ? Colors.grey[400] : Colors.grey[600]))),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildQuickActionCard({required String title, required IconData icon, required Color color, required VoidCallback onTap, required bool isDarkMode, required Color cardColor}) {
+  Widget _buildQuickActionCard(
+      {required String title,
+      required IconData icon,
+      required Color color,
+      required VoidCallback onTap,
+      required bool isDarkMode,
+      required Color cardColor}) {
     return Material(
       color: cardColor,
       borderRadius: BorderRadius.circular(16),
@@ -697,13 +933,24 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: color.withOpacity(0.1), width: 1)),
+          decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: color.withOpacity(0.1), width: 1)),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle), child: Icon(icon, color: color, size: 24)),
+              Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                      color: color.withOpacity(0.1), shape: BoxShape.circle),
+                  child: Icon(icon, color: color, size: 24)),
               const SizedBox(height: 12),
-              Text(title, textAlign: TextAlign.center, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: isDarkMode ? Colors.white : Colors.grey[800])),
+              Text(title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: isDarkMode ? Colors.white : Colors.grey[800])),
             ],
           ),
         ),
@@ -714,35 +961,96 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
   Widget _buildRecentActivitySection(bool isDarkMode, Color cardColor) {
     final users = _dashboardCache['users'] as List<DocumentSnapshot>? ?? [];
     return Container(
-      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))]),
+      decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4))
+          ]),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Recent Activity', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: isDarkMode ? Colors.white : Colors.grey[800])),
+            Text('Recent Activity',
+                style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: isDarkMode ? Colors.white : Colors.grey[800])),
             const SizedBox(height: 16),
             if (users.isEmpty)
               Padding(
                 padding: const EdgeInsets.symmetric(vertical: 24),
-                child: Column(children: [Icon(Icons.people_outline, size: 48, color: isDarkMode ? Colors.grey[600] : Colors.grey[400]), const SizedBox(height: 12), Text('No recent activity', style: TextStyle(color: isDarkMode ? Colors.grey[400] : Colors.grey[600]))]),
+                child: Column(children: [
+                  Icon(Icons.people_outline,
+                      size: 48,
+                      color: isDarkMode ? Colors.grey[600] : Colors.grey[400]),
+                  const SizedBox(height: 12),
+                  Text('No recent activity',
+                      style: TextStyle(
+                          color:
+                              isDarkMode ? Colors.grey[400] : Colors.grey[600]))
+                ]),
               )
             else
               ...users.take(5).map((doc) {
                 final user = doc.data() as Map<String, dynamic>;
                 final isTeacher = user['role'] == 'teacher';
-                final name = isTeacher ? user['teacherName'] ?? 'Unknown' : user['studentName'] ?? 'Unknown';
+                final name = isTeacher
+                    ? user['teacherName'] ?? 'Unknown'
+                    : user['studentName'] ?? 'Unknown';
                 final lastLogin = user['lastLoginAt'] as Timestamp?;
                 return ListTile(
-                  contentPadding: const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 8, horizontal: 0),
                   leading: Container(
-                    width: 40, height: 40,
-                    decoration: BoxDecoration(gradient: LinearGradient(colors: isTeacher ? [Colors.blue, Colors.blue.shade300] : [Colors.green, Colors.green.shade300]), shape: BoxShape.circle),
-                    child: Center(child: Text(name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
+                    width: 40,
+                    height: 40,
+                    decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                            colors: isTeacher
+                                ? [Colors.blue, Colors.blue.shade300]
+                                : [Colors.green, Colors.green.shade300]),
+                        shape: BoxShape.circle),
+                    child: Center(
+                        child: Text(
+                            name.isNotEmpty
+                                ? name.substring(0, 1).toUpperCase()
+                                : '?',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold))),
                   ),
-                  title: Text(name, style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: isDarkMode ? Colors.white : Colors.grey[800])),
-                  subtitle: Text(lastLogin != null ? 'Last login ${_formatTimeAgo(lastLogin.toDate())}' : 'Never logged in', style: TextStyle(fontSize: 12, color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
-                  trailing: Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4), decoration: BoxDecoration(color: isTeacher ? Colors.blue.withOpacity(0.1) : Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(12)), child: Text(isTeacher ? 'Teacher' : 'Student', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: isTeacher ? Colors.blue : Colors.green))),
+                  title: Text(name,
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                          color: isDarkMode ? Colors.white : Colors.grey[800])),
+                  subtitle: Text(
+                      lastLogin != null
+                          ? 'Last login ${_formatTimeAgo(lastLogin.toDate())}'
+                          : 'Never logged in',
+                      style: TextStyle(
+                          fontSize: 12,
+                          color: isDarkMode
+                              ? Colors.grey[400]
+                              : Colors.grey[600])),
+                  trailing: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                          color: isTeacher
+                              ? Colors.blue.withOpacity(0.1)
+                              : Colors.green.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12)),
+                      child: Text(isTeacher ? 'Teacher' : 'Student',
+                          style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w500,
+                              color: isTeacher ? Colors.blue : Colors.green))),
                 );
               }).toList(),
             if (users.length > 5)
@@ -750,7 +1058,16 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                 padding: const EdgeInsets.only(top: 12),
                 child: SizedBox(
                   width: double.infinity,
-                  child: TextButton(onPressed: () { _tabController.animateTo(1); }, style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12)), child: Text('View All Users', style: TextStyle(color: Theme.of(context).primaryColor, fontWeight: FontWeight.w500))),
+                  child: TextButton(
+                      onPressed: () {
+                        _tabController.animateTo(1);
+                      },
+                      style: TextButton.styleFrom(
+                          padding: const EdgeInsets.symmetric(vertical: 12)),
+                      child: Text('View All Users',
+                          style: TextStyle(
+                              color: Theme.of(context).primaryColor,
+                              fontWeight: FontWeight.w500))),
                 ),
               ),
           ],
@@ -759,16 +1076,32 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     );
   }
 
-  // Data Management Section (updated with Auto Semester button)
+  // Data Management Section
   Widget _buildDataManagementSection(bool isDarkMode, Color cardColor) {
     return Container(
-      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 10, offset: const Offset(0, 4))]),
+      decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 10,
+                offset: const Offset(0, 4))
+          ]),
       child: Padding(
         padding: const EdgeInsets.all(16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Row(children: [Icon(Icons.data_usage, color: Theme.of(context).primaryColor), const SizedBox(width: 8), Text('Student Data Management', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600, color: isDarkMode ? Colors.white : Colors.grey[800]))]),
+            Row(children: [
+              Icon(Icons.data_usage, color: Theme.of(context).primaryColor),
+              const SizedBox(width: 8),
+              Text('Student Data Management',
+                  style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.w600,
+                      color: isDarkMode ? Colors.white : Colors.grey[800]))
+            ]),
             const SizedBox(height: 16),
             GridView.count(
               shrinkWrap: true,
@@ -778,12 +1111,21 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
               crossAxisSpacing: 12,
               mainAxisSpacing: 12,
               children: [
-                _buildDataActionCard('Paste Text', Icons.content_paste, Colors.teal, _showTextPasteDialog, isDarkMode, cardColor),
-                _buildDataActionCard('View Students', Icons.visibility, Colors.green, _showCourseSelection, isDarkMode, cardColor),
-                _buildDataActionCard('Delete by Year', Icons.delete_sweep, Colors.orange, _deleteStudentsByYear, isDarkMode, cardColor),
-                _buildDataActionCard('Delete All', Icons.delete_forever, Colors.red, _deleteAllStudentData, isDarkMode, cardColor),
-                // 🆕 NEW: Auto Semester Update Button
-                _buildDataActionCard('Auto Semester', Icons.update, Colors.indigo, _autoUpdateSemester, isDarkMode, cardColor),
+                _buildDataActionCard('Paste Text', Icons.content_paste,
+                    Colors.teal, _showTextPasteDialog, isDarkMode, cardColor),
+                _buildDataActionCard('View Students', Icons.visibility,
+                    Colors.green, _showCourseSelection, isDarkMode, cardColor),
+                _buildDataActionCard(
+                    'Delete by Year',
+                    Icons.delete_sweep,
+                    Colors.orange,
+                    _deleteStudentsByYear,
+                    isDarkMode,
+                    cardColor),
+                _buildDataActionCard('Delete All', Icons.delete_forever,
+                    Colors.red, _deleteAllStudentData, isDarkMode, cardColor),
+                _buildDataActionCard('Auto Semester', Icons.update,
+                    Colors.indigo, _autoUpdateSemester, isDarkMode, cardColor),
               ],
             ),
             if (_showStudentListView && _selectedViewCourse != null) ...[
@@ -795,14 +1137,27 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                   Expanded(
                     child: Text(
                       'Students - $_selectedViewCourse',
-                      style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: isDarkMode ? Colors.white : Colors.grey[800]),
+                      style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                          color: isDarkMode ? Colors.white : Colors.grey[800]),
                     ),
                   ),
-                  IconButton(icon: const Icon(Icons.close), onPressed: () { setState(() { _showStudentListView = false; _selectedViewCourse = null; }); }),
+                  IconButton(
+                      icon: const Icon(Icons.close),
+                      onPressed: () {
+                        setState(() {
+                          _showStudentListView = false;
+                          _selectedViewCourse = null;
+                        });
+                      }),
                 ],
               ),
               const SizedBox(height: 12),
-              SizedBox(height: 400, child: _buildStudentListViewer(_selectedViewCourse!, isDarkMode)),
+              SizedBox(
+                  height: 400,
+                  child: _buildStudentListViewer(
+                      _selectedViewCourse!, isDarkMode)),
             ],
           ],
         ),
@@ -814,13 +1169,19 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     return StreamBuilder<QuerySnapshot>(
       stream: _getStudentsByCourse(course),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
+        if (snapshot.connectionState == ConnectionState.waiting)
+          return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError)
+          return Center(child: Text('Error: ${snapshot.error}'));
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
-              children: [Icon(Icons.no_accounts, size: 48, color: Colors.grey), const SizedBox(height: 16), Text('No students found for $course')],
+              children: [
+                Icon(Icons.no_accounts, size: 48, color: Colors.grey),
+                const SizedBox(height: 16),
+                Text('No students found for $course')
+              ],
             ),
           );
         }
@@ -833,16 +1194,25 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
             return Card(
               margin: const EdgeInsets.only(bottom: 8),
               child: ListTile(
-                leading: CircleAvatar(child: Text(student['rollNo']?.toString().substring(0, student['rollNo'].toString().length > 2 ? 2 : student['rollNo'].toString().length) ?? '?')),
+                leading: CircleAvatar(
+                    child: Text(student['rollNo']?.toString().substring(
+                            0,
+                            student['rollNo'].toString().length > 2
+                                ? 2
+                                : student['rollNo'].toString().length) ??
+                        '?')),
                 title: Text(student['name'] ?? 'Unknown'),
                 subtitle: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text('Roll No: ${student['rollNo'] ?? 'N/A'}'),
-                    Text('Section: ${student['section'] ?? 'N/A'} | Year: ${student['year'] ?? 'N/A'} | Sem: ${student['semester'] ?? 'N/A'}'),
+                    Text(
+                        'Section: ${student['section'] ?? 'N/A'} | Year: ${student['year'] ?? 'N/A'} | Sem: ${student['semester'] ?? 'N/A'}'),
                   ],
                 ),
-                trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteSingleStudent(studentId)),
+                trailing: IconButton(
+                    icon: const Icon(Icons.delete, color: Colors.red),
+                    onPressed: () => _deleteSingleStudent(studentId)),
               ),
             );
           },
@@ -851,7 +1221,8 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     );
   }
 
-  Widget _buildDataActionCard(String title, IconData icon, Color color, VoidCallback onTap, bool isDarkMode, Color cardColor) {
+  Widget _buildDataActionCard(String title, IconData icon, Color color,
+      VoidCallback onTap, bool isDarkMode, Color cardColor) {
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -859,13 +1230,24 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
         borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(12),
-          decoration: BoxDecoration(borderRadius: BorderRadius.circular(16), border: Border.all(color: color.withOpacity(0.2), width: 1)),
+          decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: color.withOpacity(0.2), width: 1)),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(padding: const EdgeInsets.all(10), decoration: BoxDecoration(color: color.withOpacity(0.1), shape: BoxShape.circle), child: Icon(icon, color: color, size: 28)),
+              Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                      color: color.withOpacity(0.1), shape: BoxShape.circle),
+                  child: Icon(icon, color: color, size: 28)),
               const SizedBox(height: 10),
-              Text(title, textAlign: TextAlign.center, style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: isDarkMode ? Colors.white : Colors.grey[800])),
+              Text(title,
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: isDarkMode ? Colors.white : Colors.grey[800])),
             ],
           ),
         ),
@@ -873,7 +1255,7 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     );
   }
 
-  // ========== USERS TAB (unchanged) ==========
+  // ========== USERS TAB ==========
   Widget _buildUsersTab(bool isDarkMode, Color cardColor) {
     return Column(
       children: [
@@ -889,10 +1271,17 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
                   fillColor: isDarkMode ? Colors.grey[800] : Colors.grey[100],
-                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none),
+                  contentPadding:
+                      const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                 ),
-                onChanged: (value) { setState(() { _searchQuery = value; }); },
+                onChanged: (value) {
+                  setState(() {
+                    _searchQuery = value;
+                  });
+                },
               ),
               const SizedBox(height: 12),
               SingleChildScrollView(
@@ -916,26 +1305,39 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
         ),
         Expanded(
           child: FutureBuilder<QuerySnapshot>(
-            future: FirebaseFirestore.instance.collection('users').orderBy('createdAt', descending: true).limit(_usersPerPage).get(),
+            future: FirebaseFirestore.instance
+                .collection('users')
+                .orderBy('createdAt', descending: true)
+                .limit(_usersPerPage)
+                .get(),
             builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) return _buildUsersLoading(isDarkMode);
-              if (snapshot.hasError) return _buildUsersError(snapshot.error.toString(), isDarkMode);
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) return _buildNoUsers(isDarkMode);
+              if (snapshot.connectionState == ConnectionState.waiting)
+                return _buildUsersLoading(isDarkMode);
+              if (snapshot.hasError)
+                return _buildUsersError(snapshot.error.toString(), isDarkMode);
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty)
+                return _buildNoUsers(isDarkMode);
               _allUsers = snapshot.data!.docs;
               _hasMoreUsers = _allUsers.length == _usersPerPage;
               final filteredUsers = _applyFilters(_allUsers);
               return NotificationListener<ScrollNotification>(
                 onNotification: (scrollInfo) {
-                  if (!_isLoadingMore && _hasMoreUsers && scrollInfo.metrics.pixels == scrollInfo.metrics.maxScrollExtent) _loadMoreUsers();
+                  if (!_isLoadingMore &&
+                      _hasMoreUsers &&
+                      scrollInfo.metrics.pixels ==
+                          scrollInfo.metrics.maxScrollExtent) _loadMoreUsers();
                   return false;
                 },
                 child: ListView.separated(
                   padding: const EdgeInsets.all(16),
-                  separatorBuilder: (context, index) => const SizedBox(height: 12),
+                  separatorBuilder: (context, index) =>
+                      const SizedBox(height: 12),
                   itemCount: filteredUsers.length + (_hasMoreUsers ? 1 : 0),
                   itemBuilder: (context, index) {
-                    if (index == filteredUsers.length && _hasMoreUsers) return _buildLoadMoreButton(isDarkMode);
-                    final user = filteredUsers[index].data() as Map<String, dynamic>;
+                    if (index == filteredUsers.length && _hasMoreUsers)
+                      return _buildLoadMoreButton(isDarkMode);
+                    final user =
+                        filteredUsers[index].data() as Map<String, dynamic>;
                     final docId = filteredUsers[index].id;
                     return _buildUserCard(user, docId, isDarkMode, cardColor);
                   },
@@ -953,68 +1355,167 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     return FilterChip(
       label: Text(label),
       selected: isSelected,
-      onSelected: (selected) { setState(() { _selectedFilter = selected ? value : 'all'; }); },
+      onSelected: (selected) {
+        setState(() {
+          _selectedFilter = selected ? value : 'all';
+        });
+      },
       selectedColor: Theme.of(context).primaryColor,
       checkmarkColor: Colors.white,
       backgroundColor: isDarkMode ? Colors.grey[800] : Colors.grey[200],
-      labelStyle: TextStyle(color: isSelected ? Colors.white : (isDarkMode ? Colors.white : Colors.grey[800])),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20), side: BorderSide(color: isSelected ? Theme.of(context).primaryColor : Colors.transparent)),
+      labelStyle: TextStyle(
+          color: isSelected
+              ? Colors.white
+              : (isDarkMode ? Colors.white : Colors.grey[800])),
+      shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+              color: isSelected
+                  ? Theme.of(context).primaryColor
+                  : Colors.transparent)),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
     );
   }
 
-  Widget _buildUserCard(Map<String, dynamic> user, String docId, bool isDarkMode, Color cardColor) {
+  Widget _buildUserCard(Map<String, dynamic> user, String docId,
+      bool isDarkMode, Color cardColor) {
     final isTeacher = user['role'] == 'teacher';
-    final name = isTeacher ? user['teacherName'] ?? 'Unknown' : user['studentName'] ?? 'Unknown';
+    final name = isTeacher
+        ? user['teacherName'] ?? 'Unknown'
+        : user['studentName'] ?? 'Unknown';
     final email = user['email'] ?? 'No email';
     final createdAt = _formatDate(user['createdAt']);
     return Container(
-      decoration: BoxDecoration(color: cardColor, borderRadius: BorderRadius.circular(16), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 6, offset: const Offset(0, 2))]),
+      decoration: BoxDecoration(
+          color: cardColor,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 6,
+                offset: const Offset(0, 2))
+          ]),
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
         leading: Container(
-          width: 48, height: 48,
-          decoration: BoxDecoration(gradient: LinearGradient(colors: isTeacher ? [Colors.blue, Colors.blue.shade300] : [Colors.green, Colors.green.shade300]), shape: BoxShape.circle),
-          child: Center(child: Text(name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?', style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold))),
+          width: 48,
+          height: 48,
+          decoration: BoxDecoration(
+              gradient: LinearGradient(
+                  colors: isTeacher
+                      ? [Colors.blue, Colors.blue.shade300]
+                      : [Colors.green, Colors.green.shade300]),
+              shape: BoxShape.circle),
+          child: Center(
+              child: Text(
+                  name.isNotEmpty ? name.substring(0, 1).toUpperCase() : '?',
+                  style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold))),
         ),
-        title: Text(name, style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: isDarkMode ? Colors.white : Colors.grey[800])),
+        title: Text(name,
+            style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+                color: isDarkMode ? Colors.white : Colors.grey[800])),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const SizedBox(height: 4),
-            Text(email, style: TextStyle(fontSize: 12, color: isDarkMode ? Colors.grey[400] : Colors.grey[600]), maxLines: 1, overflow: TextOverflow.ellipsis),
+            Text(email,
+                style: TextStyle(
+                    fontSize: 12,
+                    color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis),
             const SizedBox(height: 4),
             Row(
               children: [
-                Container(padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2), decoration: BoxDecoration(color: isTeacher ? Colors.blue.withOpacity(0.1) : Colors.green.withOpacity(0.1), borderRadius: BorderRadius.circular(6)), child: Text(isTeacher ? 'Teacher' : 'Student', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w500, color: isTeacher ? Colors.blue : Colors.green))),
+                Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                        color: isTeacher
+                            ? Colors.blue.withOpacity(0.1)
+                            : Colors.green.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(6)),
+                    child: Text(isTeacher ? 'Teacher' : 'Student',
+                        style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.w500,
+                            color: isTeacher ? Colors.blue : Colors.green))),
                 const SizedBox(width: 8),
-                Text('Joined $createdAt', style: TextStyle(fontSize: 10, color: isDarkMode ? Colors.grey[500] : Colors.grey[500])),
+                Text('Joined $createdAt',
+                    style: TextStyle(
+                        fontSize: 10,
+                        color:
+                            isDarkMode ? Colors.grey[500] : Colors.grey[500])),
               ],
             ),
           ],
         ),
         trailing: PopupMenuButton<String>(
-          icon: Icon(Icons.more_vert, color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
+          icon: Icon(Icons.more_vert,
+              color: isDarkMode ? Colors.grey[400] : Colors.grey[600]),
           onSelected: (value) => _handleUserAction(value, docId, user),
           itemBuilder: (context) => [
-            const PopupMenuItem(value: 'view', child: ListTile(leading: Icon(Icons.visibility, size: 20), title: Text('View Details'), dense: true)),
-            const PopupMenuItem(value: 'edit', child: ListTile(leading: Icon(Icons.edit, size: 20), title: Text('Edit User'), dense: true)),
-            const PopupMenuItem(value: 'message', child: ListTile(leading: Icon(Icons.message, size: 20), title: Text('Send Message'), dense: true)),
-            const PopupMenuItem(value: 'reset', child: ListTile(leading: Icon(Icons.lock_reset, size: 20), title: Text('Reset Password'), dense: true)),
-            PopupMenuItem(value: 'delete', child: ListTile(leading: Icon(Icons.delete, size: 20, color: Colors.red), title: const Text('Delete User', style: TextStyle(color: Colors.red)), dense: true)),
+            const PopupMenuItem(
+                value: 'view',
+                child: ListTile(
+                    leading: Icon(Icons.visibility, size: 20),
+                    title: Text('View Details'),
+                    dense: true)),
+            const PopupMenuItem(
+                value: 'edit',
+                child: ListTile(
+                    leading: Icon(Icons.edit, size: 20),
+                    title: Text('Edit User'),
+                    dense: true)),
+            const PopupMenuItem(
+                value: 'message',
+                child: ListTile(
+                    leading: Icon(Icons.message, size: 20),
+                    title: Text('Send Message'),
+                    dense: true)),
+            const PopupMenuItem(
+                value: 'reset',
+                child: ListTile(
+                    leading: Icon(Icons.lock_reset, size: 20),
+                    title: Text('Reset Password'),
+                    dense: true)),
+            PopupMenuItem(
+                value: 'delete',
+                child: ListTile(
+                    leading: Icon(Icons.delete, size: 20, color: Colors.red),
+                    title: const Text('Delete User',
+                        style: TextStyle(color: Colors.red)),
+                    dense: true)),
           ],
         ),
       ),
     );
   }
 
-  void _handleUserAction(String action, String docId, Map<String, dynamic> user) {
+  void _handleUserAction(
+      String action, String docId, Map<String, dynamic> user) {
     switch (action) {
-      case 'view': _viewUserDetails(user); break;
-      case 'edit': _editUser(docId, user); break;
-      case 'message': _sendMessageToUser(user); break;
-      case 'reset': _resetPassword(docId, user['email'] ?? ''); break;
-      case 'delete': _deleteUser(docId, user['teacherName'] ?? user['studentName'] ?? 'Unknown'); break;
+      case 'view':
+        _viewUserDetails(user);
+        break;
+      case 'edit':
+        _editUser(docId, user);
+        break;
+      case 'message':
+        _sendMessageToUser(user);
+        break;
+      case 'reset':
+        _resetPassword(docId, user['email'] ?? '');
+        break;
+      case 'delete':
+        _deleteUser(
+            docId, user['teacherName'] ?? user['studentName'] ?? 'Unknown');
+        break;
     }
   }
 
@@ -1027,11 +1528,13 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
         if (_selectedFilter == 'students') return user['role'] == 'student';
         if (_selectedFilter == 'active') {
           final lastLogin = user['lastLoginAt'] as Timestamp?;
-          return lastLogin != null && DateTime.now().difference(lastLogin.toDate()).inDays <= 7;
+          return lastLogin != null &&
+              DateTime.now().difference(lastLogin.toDate()).inDays <= 7;
         }
         if (_selectedFilter == 'inactive') {
           final lastLogin = user['lastLoginAt'] as Timestamp?;
-          return lastLogin == null || DateTime.now().difference(lastLogin.toDate()).inDays > 30;
+          return lastLogin == null ||
+              DateTime.now().difference(lastLogin.toDate()).inDays > 30;
         }
         return true;
       }).toList();
@@ -1039,10 +1542,16 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     if (_searchQuery.isNotEmpty) {
       filtered = filtered.where((doc) {
         final user = doc.data() as Map<String, dynamic>;
-        final name = (user['role'] == 'teacher' ? user['teacherName'] : user['studentName'])?.toLowerCase() ?? '';
+        final name = (user['role'] == 'teacher'
+                    ? user['teacherName']
+                    : user['studentName'])
+                ?.toLowerCase() ??
+            '';
         final email = (user['email'] ?? '').toLowerCase();
         final roll = (user['rollNumber'] ?? '').toLowerCase();
-        return name.contains(_searchQuery.toLowerCase()) || email.contains(_searchQuery.toLowerCase()) || roll.contains(_searchQuery.toLowerCase());
+        return name.contains(_searchQuery.toLowerCase()) ||
+            email.contains(_searchQuery.toLowerCase()) ||
+            roll.contains(_searchQuery.toLowerCase());
       }).toList();
     }
     return filtered;
@@ -1054,78 +1563,563 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     try {
       final lastUser = _allUsers.last;
       final lastCreatedAt = lastUser['createdAt'] as Timestamp;
-      final snapshot = await FirebaseFirestore.instance.collection('users').orderBy('createdAt', descending: true).startAfter([lastCreatedAt]).limit(_usersPerPage).get();
+      final snapshot = await FirebaseFirestore.instance
+          .collection('users')
+          .orderBy('createdAt', descending: true)
+          .startAfter([lastCreatedAt])
+          .limit(_usersPerPage)
+          .get();
       if (snapshot.docs.isNotEmpty) {
-        setState(() { _allUsers.addAll(snapshot.docs); _hasMoreUsers = snapshot.docs.length == _usersPerPage; });
-      } else { _hasMoreUsers = false; }
-    } catch (e) { print('Error loading more users: $e'); }
-    finally { setState(() => _isLoadingMore = false); }
+        setState(() {
+          _allUsers.addAll(snapshot.docs);
+          _hasMoreUsers = snapshot.docs.length == _usersPerPage;
+        });
+      } else {
+        _hasMoreUsers = false;
+      }
+    } catch (e) {
+      print('Error loading more users: $e');
+    } finally {
+      setState(() => _isLoadingMore = false);
+    }
   }
 
-  Widget _buildUsersLoading(bool isDarkMode) => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [CircularProgressIndicator.adaptive(), const SizedBox(height: 16), Text('Loading users...', style: TextStyle(fontSize: 14, color: isDarkMode ? Colors.grey[400] : Colors.grey[600]))]));
-  Widget _buildUsersError(String error, bool isDarkMode) => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.error_outline, size: 60, color: isDarkMode ? Colors.grey[400] : Colors.grey[400]), const SizedBox(height: 16), Text('Failed to load users', style: TextStyle(fontSize: 16, color: isDarkMode ? Colors.grey[400] : Colors.grey[600])), const SizedBox(height: 8), Padding(padding: const EdgeInsets.symmetric(horizontal: 40), child: Text(error.length > 100 ? '${error.substring(0, 100)}...' : error, style: const TextStyle(fontSize: 12, color: Colors.grey), textAlign: TextAlign.center)), const SizedBox(height: 20), ElevatedButton(onPressed: () { setState(() { _allUsers = []; }); }, child: const Text('Retry'))]));
-  Widget _buildNoUsers(bool isDarkMode) => Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Icon(Icons.people_outline, size: 60, color: isDarkMode ? Colors.grey[600] : Colors.grey[400]), const SizedBox(height: 16), Text('No users found', style: TextStyle(fontSize: 16, color: isDarkMode ? Colors.grey[400] : Colors.grey[600])), const SizedBox(height: 8), Text(_searchQuery.isNotEmpty ? 'Try a different search term' : 'No users match the selected filter', style: const TextStyle(fontSize: 12, color: Colors.grey))]));
-  Widget _buildLoadMoreButton(bool isDarkMode) => Padding(padding: const EdgeInsets.symmetric(vertical: 16), child: Center(child: _isLoadingMore ? CircularProgressIndicator.adaptive() : ElevatedButton(onPressed: _loadMoreUsers, style: ElevatedButton.styleFrom(shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))), child: const Text('Load More Users'))));
+  Widget _buildUsersLoading(bool isDarkMode) => Center(
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        CircularProgressIndicator.adaptive(),
+        const SizedBox(height: 16),
+        Text('Loading users...',
+            style: TextStyle(
+                fontSize: 14,
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600]))
+      ]));
+  Widget _buildUsersError(String error, bool isDarkMode) => Center(
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(Icons.error_outline,
+            size: 60, color: isDarkMode ? Colors.grey[400] : Colors.grey[400]),
+        const SizedBox(height: 16),
+        Text('Failed to load users',
+            style: TextStyle(
+                fontSize: 16,
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
+        const SizedBox(height: 8),
+        Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(
+                error.length > 100 ? '${error.substring(0, 100)}...' : error,
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                textAlign: TextAlign.center)),
+        const SizedBox(height: 20),
+        ElevatedButton(
+            onPressed: () {
+              setState(() {
+                _allUsers = [];
+              });
+            },
+            child: const Text('Retry'))
+      ]));
+  Widget _buildNoUsers(bool isDarkMode) => Center(
+          child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+        Icon(Icons.people_outline,
+            size: 60, color: isDarkMode ? Colors.grey[600] : Colors.grey[400]),
+        const SizedBox(height: 16),
+        Text('No users found',
+            style: TextStyle(
+                fontSize: 16,
+                color: isDarkMode ? Colors.grey[400] : Colors.grey[600])),
+        const SizedBox(height: 8),
+        Text(
+            _searchQuery.isNotEmpty
+                ? 'Try a different search term'
+                : 'No users match the selected filter',
+            style: const TextStyle(fontSize: 12, color: Colors.grey))
+      ]));
+  Widget _buildLoadMoreButton(bool isDarkMode) => Padding(
+      padding: const EdgeInsets.symmetric(vertical: 16),
+      child: Center(
+          child: _isLoadingMore
+              ? CircularProgressIndicator.adaptive()
+              : ElevatedButton(
+                  onPressed: _loadMoreUsers,
+                  style: ElevatedButton.styleFrom(
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(20))),
+                  child: const Text('Load More Users'))));
 
-  void _viewUserDetails(Map<String, dynamic> user) { _showSnackBar('View user details: ${user['email']}'); }
-  void _editUser(String docId, Map<String, dynamic> user) { _showSnackBar('Edit user: ${user['email']}'); }
-  void _resetPassword(String docId, String email) { _showSnackBar('Reset password for: $email'); }
-  void _deleteUser(String docId, String name) { _showSnackBar('Delete user: $name'); }
+  void _viewUserDetails(Map<String, dynamic> user) {
+    _showSnackBar('View user details: ${user['email']}');
+  }
 
-  // ========== MESSAGES TAB (unchanged) ==========
+  void _editUser(String docId, Map<String, dynamic> user) {
+    _showSnackBar('Edit user: ${user['email']}');
+  }
+
+  void _resetPassword(String docId, String email) {
+    _showSnackBar('Reset password for: $email');
+  }
+
+  void _deleteUser(String docId, String name) {
+    _showSnackBar('Delete user: $name');
+  }
+
+  // ========== MESSAGES TAB ==========
   Widget _buildMessagesTab(bool isDarkMode, Color cardColor) {
-    return FutureBuilder<QuerySnapshot>(
-      future: FirebaseFirestore.instance.collection('admin_messages').orderBy('timestamp', descending: true).limit(30).get(),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return Center(
-            child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-              Icon(Icons.message_outlined, size: 60, color: Colors.grey),
-              const SizedBox(height: 16),
-              const Text('No messages sent yet'),
-              const SizedBox(height: 8),
-              const Text('Send your first message using the + button', style: TextStyle(color: Colors.grey)),
-              const SizedBox(height: 20),
-              ElevatedButton.icon(onPressed: _sendMessageToUsers, icon: const Icon(Icons.send), label: const Text('Send First Message')),
-            ]),
-          );
-        }
-        _allMessages = snapshot.data!.docs;
-        return ListView.builder(
+    return Column(
+      children: [
+        Container(
           padding: const EdgeInsets.all(16),
-          itemCount: _allMessages.length,
-          itemBuilder: (context, index) {
-            final message = _allMessages[index].data() as Map<String, dynamic>;
-            final timestamp = message['timestamp'] as Timestamp?;
-            return Card(
-              margin: const EdgeInsets.only(bottom: 12),
-              child: ListTile(
-                leading: CircleAvatar(child: Icon(Icons.message, color: _getGroupColor(message['targetGroup'] ?? 'all'))),
-                title: Text(message['message'] ?? '', maxLines: 1, overflow: TextOverflow.ellipsis),
-                subtitle: Text('To: ${_getGroupDisplayName(message['targetGroup'] ?? 'all')} • ${timestamp != null ? DateFormat('MMM d, HH:mm').format(timestamp.toDate()) : 'Unknown date'}'),
-                trailing: IconButton(icon: const Icon(Icons.delete, color: Colors.red), onPressed: () => _deleteMessage(_allMessages[index].id, message['message'] ?? '')),
-                onTap: () => _showMessageDetails(message),
+          color: isDarkMode ? Colors.grey[850] : Colors.white,
+          child: Column(
+            children: [
+              ElevatedButton.icon(
+                onPressed: _sendMessageToUsers,
+                icon: const Icon(Icons.send),
+                label: const Text('Send Message to Group'),
+                style: ElevatedButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 48),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12)),
+                ),
               ),
-            );
-          },
-        );
-      },
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 8),
+              const Text('Recent Messages',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            ],
+          ),
+        ),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _refreshMessages,
+            child: FutureBuilder<QuerySnapshot>(
+              future: FirebaseFirestore.instance
+                  .collection('admin_messages')
+                  .orderBy('timestamp', descending: true)
+                  .limit(50)
+                  .get(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.message_outlined,
+                            size: 60, color: Colors.grey),
+                        const SizedBox(height: 16),
+                        const Text('No messages sent yet'),
+                        const SizedBox(height: 8),
+                        const Text(
+                            'Send your first message using the button above',
+                            style: TextStyle(color: Colors.grey)),
+                      ],
+                    ),
+                  );
+                }
+                final messages = snapshot.data!.docs;
+                return ListView.builder(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final message =
+                        messages[index].data() as Map<String, dynamic>;
+                    final timestamp = message['timestamp'] as Timestamp?;
+                    final targetGroup = message['targetGroup'] ?? 'all';
+                    final title = message['title'] ?? 'Campus Clock';
+                    final body = message['message'] ?? '';
+                    final sender = message['senderName'] ?? 'Admin';
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: ListTile(
+                        leading: CircleAvatar(
+                          backgroundColor:
+                              _getGroupColor(targetGroup).withOpacity(0.2),
+                          child: Icon(Icons.message,
+                              color: _getGroupColor(targetGroup)),
+                        ),
+                        title: Text(title,
+                            style:
+                                const TextStyle(fontWeight: FontWeight.bold)),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(body,
+                                maxLines: 2, overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 4),
+                            Text(
+                              'To: ${_getGroupDisplayName(targetGroup)} • By: $sender • ${timestamp != null ? DateFormat('MMM d, HH:mm').format(timestamp.toDate()) : 'Unknown date'}',
+                              style: TextStyle(
+                                  fontSize: 12,
+                                  color: isDarkMode
+                                      ? Colors.grey[500]
+                                      : Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                        trailing: IconButton(
+                          icon: const Icon(Icons.delete, color: Colors.red),
+                          onPressed: () =>
+                              _deleteMessage(messages[index].id, title),
+                        ),
+                        onTap: () => _showMessageDetails(message),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ),
+      ],
     );
   }
 
-  Color _getGroupColor(String group) => group == 'teachers' ? Colors.blue : group == 'students' ? Colors.green : Colors.purple;
-  String _getGroupDisplayName(String group) => group == 'teachers' ? 'Teachers' : group == 'students' ? 'Students' : 'All Users';
+  Future<void> _refreshMessages() async {
+    setState(() {});
+  }
 
-  // ========== ANALYTICS TAB (unchanged) ==========
+  // ========== IMPROVED MESSAGE SENDING METHODS ==========
+  Future<void> _sendMessageToUsers() async {
+    TextEditingController titleController = TextEditingController();
+    TextEditingController msgController = TextEditingController();
+    String targetGroup = 'all';
+    bool sending = false;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setStateDialog) {
+          return AlertDialog(
+            title: const Text('Send Message'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: titleController,
+                  decoration: const InputDecoration(
+                    hintText: 'Message title...',
+                    labelText: 'Title',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: msgController,
+                  maxLines: 3,
+                  decoration: const InputDecoration(
+                    hintText: 'Enter your message...',
+                    labelText: 'Message',
+                    border: OutlineInputBorder(),
+                  ),
+                  autofocus: true,
+                ),
+                const SizedBox(height: 16),
+                const Text('Send to:',
+                    style: TextStyle(fontWeight: FontWeight.bold)),
+                Row(
+                  children: [
+                    Expanded(
+                      child: RadioListTile(
+                        title: const Text('All Users'),
+                        value: 'all',
+                        groupValue: targetGroup,
+                        onChanged: (v) =>
+                            setStateDialog(() => targetGroup = v.toString()),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    Expanded(
+                      child: RadioListTile(
+                        title: const Text('Teachers'),
+                        value: 'teachers',
+                        groupValue: targetGroup,
+                        onChanged: (v) =>
+                            setStateDialog(() => targetGroup = v.toString()),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    Expanded(
+                      child: RadioListTile(
+                        title: const Text('Students'),
+                        value: 'students',
+                        groupValue: targetGroup,
+                        onChanged: (v) =>
+                            setStateDialog(() => targetGroup = v.toString()),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: sending
+                    ? null
+                    : () async {
+                        if (titleController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Please enter a title'),
+                                backgroundColor: Colors.orange),
+                          );
+                          return;
+                        }
+                        if (msgController.text.trim().isEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                                content: Text('Please enter a message'),
+                                backgroundColor: Colors.orange),
+                          );
+                          return;
+                        }
+                        setStateDialog(() => sending = true);
+                        Navigator.pop(context);
+                        await _processMessageSending(
+                          title: titleController.text.trim(),
+                          message: msgController.text.trim(),
+                          targetGroup: targetGroup,
+                        );
+                      },
+                child: sending
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                    : const Text('Send'),
+              ),
+            ],
+          );
+        },
+      ),
+    );
+  }
+
+  Future<void> _processMessageSending({
+    required String title,
+    required String message,
+    required String targetGroup,
+  }) async {
+    _showSnackBar('Sending message to $targetGroup...');
+
+    try {
+      final adminName = FirebaseAuth.instance.currentUser?.email ?? 'Admin';
+      final result = await FCMService.sendNotificationsToGroup(
+        message: message,
+        targetGroup: targetGroup,
+        senderName: adminName,
+        title: title,
+      );
+
+      await FirebaseFirestore.instance.collection('admin_messages').add({
+        'title': title,
+        'message': message,
+        'targetGroup': targetGroup,
+        'senderName': adminName,
+        'timestamp': FieldValue.serverTimestamp(),
+        'status': 'sent',
+        'totalRecipients': result['successfulSends'] ?? 0,
+      });
+
+      _showSnackBar(
+          '✅ Message sent successfully to ${result['successfulSends']} recipients');
+      _refreshMessages();
+    } catch (e) {
+      _showSnackBar('❌ Failed to send message: $e', isError: true);
+      await FirebaseFirestore.instance.collection('admin_messages').add({
+        'title': title,
+        'message': message,
+        'targetGroup': targetGroup,
+        'senderName': FirebaseAuth.instance.currentUser?.email ?? 'Admin',
+        'timestamp': FieldValue.serverTimestamp(),
+        'status': 'failed',
+        'error': e.toString(),
+      });
+    }
+  }
+
+  Future<void> _sendMessageToUser(Map<String, dynamic> user) async {
+    final userId = user['userId'] ?? user['id'];
+    final userEmail = user['email'] ?? 'Unknown';
+    if (userId == null) {
+      _showSnackBar('Cannot send message: user ID not found', isError: true);
+      return;
+    }
+
+    TextEditingController titleController = TextEditingController();
+    TextEditingController msgController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+            'Send Message to ${user['studentName'] ?? user['teacherName'] ?? userEmail}'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: const InputDecoration(
+                  hintText: 'Message title...', border: OutlineInputBorder()),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: msgController,
+              maxLines: 3,
+              decoration: const InputDecoration(
+                  hintText: 'Enter your message...',
+                  border: OutlineInputBorder()),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () async {
+              if (titleController.text.trim().isEmpty ||
+                  msgController.text.trim().isEmpty) {
+                _showSnackBar('Please enter title and message', isError: true);
+                return;
+              }
+              Navigator.pop(context);
+              await _processDirectMessage(
+                userId: userId,
+                title: titleController.text.trim(),
+                message: msgController.text.trim(),
+                userEmail: userEmail,
+              );
+            },
+            child: const Text('Send'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _processDirectMessage({
+    required String userId,
+    required String title,
+    required String message,
+    required String userEmail,
+  }) async {
+    _showSnackBar('Sending message...');
+    try {
+      final adminName = FirebaseAuth.instance.currentUser?.email ?? 'Admin';
+      final result = await FCMService.sendNotificationToUser(
+        userId: userId,
+        title: title,
+        body: message,
+        senderName: adminName,
+      );
+
+      if (result['success'] == true) {
+        _showSnackBar('✅ Message sent to $userEmail');
+      } else {
+        _showSnackBar('❌ Failed to send message: ${result['error']}',
+            isError: true);
+      }
+    } catch (e) {
+      _showSnackBar('❌ Error sending message: $e', isError: true);
+    }
+  }
+
+  void _showMessageDetails(Map<String, dynamic> message) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(message['title'] ?? 'Message Details'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+                'To: ${_getGroupDisplayName(message['targetGroup'] ?? 'all')}'),
+            const SizedBox(height: 8),
+            Text('From: ${message['senderName'] ?? 'Admin'}'),
+            const SizedBox(height: 8),
+            Text(
+                'Sent: ${message['timestamp'] != null ? DateFormat('dd MMM yyyy, HH:mm').format((message['timestamp'] as Timestamp).toDate()) : 'Unknown'}'),
+            const Divider(),
+            Text(message['message'] ?? '',
+                style: const TextStyle(fontSize: 16)),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteMessage(String messageId, String messageText) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Message'),
+        content: Text('Delete this message: "$messageText"?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete')),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      try {
+        await FirebaseFirestore.instance
+            .collection('admin_messages')
+            .doc(messageId)
+            .delete();
+        _showSnackBar('Message deleted');
+        _refreshMessages();
+      } catch (e) {
+        _showSnackBar('Error deleting message: $e', isError: true);
+      }
+    }
+  }
+
+  Color _getGroupColor(String group) => group == 'teachers'
+      ? Colors.blue
+      : group == 'students'
+          ? Colors.green
+          : Colors.purple;
+  String _getGroupDisplayName(String group) => group == 'teachers'
+      ? 'Teachers'
+      : group == 'students'
+          ? 'Students'
+          : 'All Users';
+
+  // ========== ANALYTICS TAB ==========
   Widget _buildAnalyticsTab(bool isDarkMode, Color cardColor) {
     return FutureBuilder<Map<String, dynamic>>(
       future: _loadAnalyticsData(),
       builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) return const Center(child: CircularProgressIndicator());
-        if (snapshot.hasError) return Center(child: Text('Error: ${snapshot.error}'));
-        if (!snapshot.hasData) return const Center(child: Text('No analytics data'));
+        if (snapshot.connectionState == ConnectionState.waiting)
+          return const Center(child: CircularProgressIndicator());
+        if (snapshot.hasError)
+          return Center(child: Text('Error: ${snapshot.error}'));
+        if (!snapshot.hasData)
+          return const Center(child: Text('No analytics data'));
         final data = snapshot.data!;
         final total = data['total'] as int;
         final teachers = data['teachers'] as int;
@@ -1141,7 +2135,9 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      const Text('User Distribution', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                      const Text('User Distribution',
+                          style: TextStyle(
+                              fontSize: 18, fontWeight: FontWeight.bold)),
                       const SizedBox(height: 16),
                       if (total > 0) ...[
                         SizedBox(
@@ -1149,18 +2145,55 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                           child: Center(
                             child: Stack(
                               children: [
-                                SizedBox(width: 200, height: 200, child: CircularProgressIndicator(value: teachers / total, strokeWidth: 20, backgroundColor: Colors.grey.shade200)),
-                                Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [Text('$total', style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold)), const Text('Total Users')])),
+                                SizedBox(
+                                    width: 200,
+                                    height: 200,
+                                    child: CircularProgressIndicator(
+                                        value: teachers / total,
+                                        strokeWidth: 20,
+                                        backgroundColor: Colors.grey.shade200)),
+                                Center(
+                                    child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                      Text('$total',
+                                          style: const TextStyle(
+                                              fontSize: 32,
+                                              fontWeight: FontWeight.bold)),
+                                      const Text('Total Users')
+                                    ])),
                               ],
                             ),
                           ),
                         ),
                         const SizedBox(height: 16),
-                        Row(mainAxisAlignment: MainAxisAlignment.spaceEvenly, children: [
-                          Row(children: [Container(width: 12, height: 12, decoration: const BoxDecoration(color: Colors.blue, shape: BoxShape.circle)), const SizedBox(width: 4), Text('Teachers: $teachers')]),
-                          Row(children: [Container(width: 12, height: 12, decoration: const BoxDecoration(color: Colors.green, shape: BoxShape.circle)), const SizedBox(width: 4), Text('Students: $students')]),
-                        ]),
-                      ] else const Text('No users yet'),
+                        Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                            children: [
+                              Row(children: [
+                                Container(
+                                    width: 12,
+                                    height: 12,
+                                    decoration: const BoxDecoration(
+                                        color: Colors.blue,
+                                        shape: BoxShape.circle)),
+                                const SizedBox(width: 4),
+                                Text('Teachers: $teachers')
+                              ]),
+                              Row(children: [
+                                Container(
+                                    width: 12,
+                                    height: 12,
+                                    decoration: const BoxDecoration(
+                                        color: Colors.green,
+                                        shape: BoxShape.circle)),
+                                const SizedBox(width: 4),
+                                Text('Students: $students')
+                              ]),
+                            ]),
+                      ] else
+                        const Text('No users yet'),
                     ],
                   ),
                 ),
@@ -1171,13 +2204,23 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      _buildStatRow('Active Users (7d)', '$activeUsers / $total', total > 0 ? activeUsers / total : 0),
+                      _buildStatRow(
+                          'Active Users (7d)',
+                          '$activeUsers / $total',
+                          total > 0 ? activeUsers / total : 0),
                       const SizedBox(height: 12),
-                      _buildStatRow('New Users (7d)', '$recentUsers', total > 0 ? recentUsers / total : 0),
+                      _buildStatRow('New Users (7d)', '$recentUsers',
+                          total > 0 ? recentUsers / total : 0),
                       const SizedBox(height: 12),
-                      _buildStatRow('Engagement Rate', '${total > 0 ? ((activeUsers / total) * 100).toStringAsFixed(1) : 0}%', total > 0 ? activeUsers / total : 0),
+                      _buildStatRow(
+                          'Engagement Rate',
+                          '${total > 0 ? ((activeUsers / total) * 100).toStringAsFixed(1) : 0}%',
+                          total > 0 ? activeUsers / total : 0),
                       const SizedBox(height: 12),
-                      _buildStatRow('Growth Rate', '${total > 0 ? ((recentUsers / total) * 100).toStringAsFixed(1) : 0}%', total > 0 ? recentUsers / total : 0),
+                      _buildStatRow(
+                          'Growth Rate',
+                          '${total > 0 ? ((recentUsers / total) * 100).toStringAsFixed(1) : 0}%',
+                          total > 0 ? recentUsers / total : 0),
                     ],
                   ),
                 ),
@@ -1193,9 +2236,14 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [Text(title), Text(value, style: const TextStyle(fontWeight: FontWeight.bold))]),
+        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+          Text(title),
+          Text(value, style: const TextStyle(fontWeight: FontWeight.bold))
+        ]),
         const SizedBox(height: 4),
-        LinearProgressIndicator(value: progress.clamp(0.0, 1.0), backgroundColor: Colors.grey.shade200),
+        LinearProgressIndicator(
+            value: progress.clamp(0.0, 1.0),
+            backgroundColor: Colors.grey.shade200),
       ],
     );
   }
@@ -1206,14 +2254,22 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
     final weekAgo = DateTime.now().subtract(const Duration(days: 7));
     for (var doc in users.docs) {
       final data = doc.data();
-      if (data['role'] == 'teacher') teachers++;
+      if (data['role'] == 'teacher')
+        teachers++;
       else if (data['role'] == 'student') students++;
       final lastLogin = data['lastLoginAt'] as Timestamp?;
-      if (lastLogin != null && DateTime.now().difference(lastLogin.toDate()).inDays <= 7) active++;
+      if (lastLogin != null &&
+          DateTime.now().difference(lastLogin.toDate()).inDays <= 7) active++;
       final createdAt = data['createdAt'] as Timestamp?;
       if (createdAt != null && createdAt.toDate().isAfter(weekAgo)) recent++;
     }
-    return {'total': users.docs.length, 'teachers': teachers, 'students': students, 'activeUsers': active, 'recentUsers': recent};
+    return {
+      'total': users.docs.length,
+      'teachers': teachers,
+      'students': students,
+      'activeUsers': active,
+      'recentUsers': recent
+    };
   }
 
   // ========== SETTINGS TAB ==========
@@ -1222,21 +2278,71 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          Card(child: ListTile(title: const Text('Change Master Password'), subtitle: const Text('Update admin password'), leading: const Icon(Icons.lock), trailing: const Icon(Icons.chevron_right), onTap: () => _showSnackBar('Feature coming soon'))),
-          Card(child: ListTile(title: const Text('Clear Cache'), subtitle: const Text('Clear all cached data'), leading: const Icon(Icons.delete_sweep), trailing: const Icon(Icons.chevron_right), onTap: _clearSystemCache)),
-          Card(child: ListTile(title: const Text('Export Data'), subtitle: const Text('Export all data as CSV'), leading: const Icon(Icons.download), trailing: const Icon(Icons.chevron_right), onTap: _exportData)),
-          Card(child: ListTile(title: const Text('Backup Database'), subtitle: const Text('Create system backup'), leading: const Icon(Icons.backup), trailing: const Icon(Icons.chevron_right), onTap: _backupDatabase)),
-          Card(child: ListTile(title: const Text('Notification Settings'), subtitle: const Text('Configure notifications'), leading: const Icon(Icons.notifications), trailing: const Icon(Icons.chevron_right), onTap: () => _showSnackBar('Notification settings'))),
+          Card(
+              child: ListTile(
+                  title: const Text('Change Master Password'),
+                  subtitle: const Text('Update admin password'),
+                  leading: const Icon(Icons.lock),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _showSnackBar('Feature coming soon'))),
+          Card(
+              child: ListTile(
+                  title: const Text('Clear Cache'),
+                  subtitle: const Text('Clear all cached data'),
+                  leading: const Icon(Icons.delete_sweep),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _clearSystemCache)),
+          Card(
+              child: ListTile(
+                  title: const Text('Export Data'),
+                  subtitle: const Text('Export all data as CSV'),
+                  leading: const Icon(Icons.download),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _exportData)),
+          Card(
+              child: ListTile(
+                  title: const Text('Backup Database'),
+                  subtitle: const Text('Create system backup'),
+                  leading: const Icon(Icons.backup),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _backupDatabase)),
+          Card(
+              child: ListTile(
+                  title: const Text('Notification Settings'),
+                  subtitle: const Text('Configure notifications'),
+                  leading: const Icon(Icons.notifications),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _showSnackBar('Notification settings'))),
         ],
       ),
     );
   }
 
-  void _clearSystemCache() { _showSnackBar('Cache cleared'); setState(() { _dashboardCache = _getMinimalDashboardData(); _allUsers.clear(); _allMessages.clear(); _lastCacheUpdate = null; }); }
-  void _backupDatabase() { _showSnackBar('Backup created'); }
-  void _exportData() { _showSnackBar('Exporting data...'); }
-  void _sendAnnouncement() { _showSnackBar('Sending announcement...'); }
-  void _viewSecurityReport() { _showSnackBar('Viewing security report...'); }
+  void _clearSystemCache() {
+    _showSnackBar('Cache cleared');
+    setState(() {
+      _dashboardCache = _getMinimalDashboardData();
+      _allUsers.clear();
+      _allMessages.clear();
+      _lastCacheUpdate = null;
+    });
+  }
+
+  void _backupDatabase() {
+    _showSnackBar('Backup created');
+  }
+
+  void _exportData() {
+    _showSnackBar('Exporting data...');
+  }
+
+  void _sendAnnouncement() {
+    _sendMessageToUsers();
+  }
+
+  void _viewSecurityReport() {
+    _showSnackBar('Viewing security report...');
+  }
 
   // ========== SECURITY TAB ==========
   Widget _buildSecurityTab(bool isDarkMode, Color cardColor) {
@@ -1244,56 +2350,40 @@ class _AdminScreenState extends State<AdminScreen> with TickerProviderStateMixin
       padding: const EdgeInsets.all(16),
       child: Column(
         children: [
-          Card(child: ListTile(title: const Text('Security Report'), subtitle: const Text('View security report'), leading: const Icon(Icons.security), trailing: const Icon(Icons.chevron_right), onTap: () => _showSnackBar('Security report'))),
-          Card(child: ListTile(title: const Text('Audit Logs'), subtitle: const Text('View system audit logs'), leading: const Icon(Icons.history), trailing: const Icon(Icons.chevron_right), onTap: _viewAuditLogs)),
-          Card(child: ListTile(title: const Text('Blocked Users'), subtitle: const Text('Manage blocked users'), leading: const Icon(Icons.block), trailing: const Icon(Icons.chevron_right), onTap: () => _showSnackBar('Blocked users'))),
-          Card(child: ListTile(title: const Text('Login History'), subtitle: const Text('View login attempts'), leading: const Icon(Icons.login), trailing: const Icon(Icons.chevron_right), onTap: () => _showSnackBar('Login history'))),
+          Card(
+              child: ListTile(
+                  title: const Text('Security Report'),
+                  subtitle: const Text('View security report'),
+                  leading: const Icon(Icons.security),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _showSnackBar('Security report'))),
+          Card(
+              child: ListTile(
+                  title: const Text('Audit Logs'),
+                  subtitle: const Text('View system audit logs'),
+                  leading: const Icon(Icons.history),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: _viewAuditLogs)),
+          Card(
+              child: ListTile(
+                  title: const Text('Blocked Users'),
+                  subtitle: const Text('Manage blocked users'),
+                  leading: const Icon(Icons.block),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _showSnackBar('Blocked users'))),
+          Card(
+              child: ListTile(
+                  title: const Text('Login History'),
+                  subtitle: const Text('View login attempts'),
+                  leading: const Icon(Icons.login),
+                  trailing: const Icon(Icons.chevron_right),
+                  onTap: () => _showSnackBar('Login history'))),
         ],
       ),
     );
   }
 
-  void _viewAuditLogs() async { _showSnackBar('Loading audit logs...'); }
-
-  // ========== MESSAGE SENDING METHODS ==========
-  Future<void> _sendMessageToUsers() async {
-    TextEditingController msgController = TextEditingController();
-    String targetGroup = 'all';
-    await showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Send Message'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(controller: msgController, maxLines: 3, decoration: const InputDecoration(hintText: 'Enter your message...'), autofocus: true),
-            const SizedBox(height: 16),
-            const Text('Send to:', style: TextStyle(fontWeight: FontWeight.bold)),
-            Row(
-              children: [
-                Expanded(child: RadioListTile(title: const Text('All'), value: 'all', groupValue: targetGroup, onChanged: (v) => targetGroup = v.toString())),
-                Expanded(child: RadioListTile(title: const Text('Teachers'), value: 'teachers', groupValue: targetGroup, onChanged: (v) => targetGroup = v.toString())),
-                Expanded(child: RadioListTile(title: const Text('Students'), value: 'students', groupValue: targetGroup, onChanged: (v) => targetGroup = v.toString())),
-              ],
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () async { Navigator.pop(context); await _processMessageSending(msgController.text, targetGroup); }, child: const Text('Send')),
-        ],
-      ),
-    );
+  void _viewAuditLogs() async {
+    _showSnackBar('Loading audit logs...');
   }
-
-  Future<void> _processMessageSending(String message, String targetGroup) async {
-    if (message.trim().isEmpty) { _showSnackBar('Please enter a message', isError: true); return; }
-    _showSnackBar('Sending message...');
-    await Future.delayed(const Duration(seconds: 1));
-    _showSnackBar('✅ Message sent successfully to $targetGroup');
-  }
-
-  void _showMessageDetails(Map<String, dynamic> message) { _showSnackBar('Message details: ${message['message']}'); }
-  Future<void> _deleteMessage(String messageId, String messageText) async { _showSnackBar('Message deleted'); }
-  void _sendMessageToUser(Map<String, dynamic> user) { _showSnackBar('Send message to ${user['email']}'); }
 }
