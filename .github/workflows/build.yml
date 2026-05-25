@@ -30,16 +30,22 @@ jobs:
     - name: Build APK
       run: flutter build apk --release
     
-    - name: Find and upload APK
+    - name: List all files
       run: |
-        echo "Searching for APK files..."
+        echo "=== Current directory ==="
+        pwd
+        echo ""
+        echo "=== Build directory contents ==="
+        find build -type f 2>/dev/null | head -50
+        echo ""
+        echo "=== Search for APK files ==="
         find . -name "*.apk" -type f
         echo ""
-        echo "Checking flutter-apk directory..."
-        ls -la build/app/outputs/flutter-apk/ 2>/dev/null || echo "Directory not found"
+        echo "=== Check standard APK location ==="
+        ls -la build/app/outputs/flutter-apk/ || echo "Directory not found"
         echo ""
-        echo "Checking release directory..."
-        ls -la build/app/outputs/apk/release/ 2>/dev/null || echo "Directory not found"
+        echo "=== Check release APK location ==="
+        ls -la build/app/outputs/apk/release/ || echo "Directory not found"
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
@@ -49,3 +55,4 @@ jobs:
           build/app/outputs/flutter-apk/*.apk
           build/app/outputs/apk/release/*.apk
           **/app-release.apk
+          **/app-debug.apk
