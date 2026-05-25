@@ -1,4 +1,3 @@
-// lib/Home/Home_page.dart
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -37,6 +36,8 @@ class _HomePageState extends State<HomePage> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   bool _isAdmin = false;
   String? _userPhotoUrl;
+  String? _selectedYear;
+  String? _selectedSection;
 
   // Local profile image
   File? _selectedProfileImage;
@@ -100,6 +101,7 @@ class _HomePageState extends State<HomePage> {
     final prefs = await SharedPreferences.getInstance();
     final user = FirebaseAuth.instance.currentUser;
 
+    // First load from SharedPreferences
     String? storedRole = prefs.getString('user_role');
     bool isTeacher = prefs.getBool('is_teacher') == true;
     final isAdminFromPrefs = prefs.getBool('is_admin') == true;
@@ -108,22 +110,26 @@ class _HomePageState extends State<HomePage> {
     setState(() {
       if (isTeacher) {
         _userRole = 'Teacher';
-        _isProvider = false;
+      } else if (storedRole == 'admin' || isAdminFromPrefs || isAdminEmail) {
+        _userRole = 'Admin';
+        _isAdmin = true;
       } else {
         _userRole = 'Student';
-        _isProvider = false;
       }
+      
       _rollNumber = prefs.getString('roll_number');
       _teacherName = prefs.getString('teacher_name');
       _selectedCourse = prefs.getString('selected_course');
       _selectedSemester = prefs.getInt('selected_semester');
+      _selectedYear = prefs.getString('selected_year');
+      _selectedSection = prefs.getString('selected_section');
       _studentName = prefs.getString('student_name');
       _studentGender = prefs.getString('student_gender');
       _subjects = prefs.getStringList('selected_subjects');
       _userEmail = user?.email ?? prefs.getString('email');
       _userId = user?.uid;
       _userPhotoUrl = user?.photoURL;
-      _isAdmin = isAdminFromPrefs || isAdminEmail;
+      _isAdmin = isAdminFromPrefs || isAdminEmail || storedRole == 'admin';
     });
 
     final profileImagePath = prefs.getString('profile_image_path');
@@ -133,6 +139,7 @@ class _HomePageState extends State<HomePage> {
       });
     }
 
+    // Then load/refresh from Firestore to get latest data
     if (user != null) {
       try {
         final doc = await FirebaseFirestore.instance
@@ -142,6 +149,31 @@ class _HomePageState extends State<HomePage> {
         if (doc.exists) {
           final data = doc.data();
           setState(() {
+            // Update from Firestore
+            if (data?['displayName'] != null && _studentName == null) {
+              _studentName = data?['displayName'];
+            }
+            if (data?['teacherName'] != null && _teacherName == null) {
+              _teacherName = data?['teacherName'];
+            }
+            if (data?['rollNumber'] != null) {
+              _rollNumber = data?['rollNumber'];
+            }
+            if (data?['course'] != null) {
+              _selectedCourse = data?['course'];
+            }
+            if (data?['year'] != null) {
+              _selectedYear = data?['year'];
+            }
+            if (data?['semester'] != null) {
+              _selectedSemester = _parseSemesterNumber(data?['semester']);
+            }
+            if (data?['section'] != null) {
+              _selectedSection = data?['section'];
+            }
+            if (data?['gender'] != null) {
+              _studentGender = data?['gender'];
+            }
             if (_subjects == null || _subjects!.isEmpty) {
               _subjects = List<String>.from(data?['subjects'] ?? []);
             }
@@ -149,6 +181,31 @@ class _HomePageState extends State<HomePage> {
             _userPhotoUrl ??= data?['photoUrl'];
             if (data?['isAdmin'] == true) {
               _isAdmin = true;
+              _userRole = 'Admin';
+            }
+            
+            // Update SharedPreferences with latest data
+            if (data?['rollNumber'] != null) {
+              await prefs.setString('roll_number', data?['rollNumber']);
+            }
+            if (data?['course'] != null) {
+              await prefs.setString('selected_course', data?['course']);
+            }
+            if (data?['year'] != null) {
+              await prefs.setString('selected_year', data?['year']);
+            }
+            if (data?['semester'] != null) {
+              await prefs.setInt('selected_semester', _parseSemesterNumber(data?['semester']));
+            }
+            if (data?['section'] != null) {
+              await prefs.setString('selected_section', data?['section']);
+            }
+            if (data?['gender'] != null) {
+              await prefs.setString('student_gender', data?['gender']);
+            }
+            if (data?['displayName'] != null) {
+              await prefs.setString('student_name', data?['displayName']);
+              await prefs.setString('user_name', data?['displayName']);
             }
           });
         }
@@ -161,8 +218,27 @@ class _HomePageState extends State<HomePage> {
       _isLoading = false;
     });
 
-    print('Admin status: $_isAdmin');
-    print('User role: $_userRole');
+    print('=== User Profile Loaded ===');
+    print('Role: $_userRole');
+    print('Admin: $_isAdmin');
+    print('Student Name: $_studentName');
+    print('Teacher Name: $_teacherName');
+    print('Roll Number: $_rollNumber');
+    print('Course: $_selectedCourse');
+    print('Year: $_selectedYear');
+    print('Semester: $_selectedSemester');
+    print('Section: $_selectedSection');
+    print('Gender: $_studentGender');
+    print('Email: $_userEmail');
+    print('===========================');
+  }
+
+  int _parseSemesterNumber(dynamic semester) {
+    if (semester == null) return 1;
+    if (semester is int) return semester;
+    final str = semester.toString();
+    final match = RegExp(r'\d+').firstMatch(str);
+    return match != null ? int.parse(match.group(0)!) : 1;
   }
 
   void _openProfileScreen() {
@@ -385,26 +461,6 @@ class _HomePageState extends State<HomePage> {
           Navigator.pushNamed(context, '/admin');
         },
       });
-    }
-
-    // Fill empty spaces with placeholder
-    if (actions.length % crossAxisCount != 0 && actions.length < crossAxisCount) {
-      while (actions.length % crossAxisCount != 0) {
-        actions.add({
-          'icon': Icons.add,
-          'title': 'Coming Soon',
-          'subtitle': 'More features',
-          'color': Colors.grey.shade400,
-          'onTap': () {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Feature coming soon!'),
-                backgroundColor: Colors.blue,
-              ),
-            );
-          },
-        });
-      }
     }
 
     return Container(
@@ -633,17 +689,17 @@ class _HomePageState extends State<HomePage> {
                       backgroundImage: _getProfileImageProvider(),
                       child: _getProfileImageProvider() == null
                           ? Text(
-                        (_studentName?.isNotEmpty == true
-                            ? _studentName!.substring(0, 1)
-                            : _teacherName?.isNotEmpty == true
-                            ? _teacherName!.substring(0, 1)
-                            : 'U')
-                            .toUpperCase(),
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      )
+                              (_studentName?.isNotEmpty == true
+                                  ? _studentName!.substring(0, 1)
+                                  : _teacherName?.isNotEmpty == true
+                                  ? _teacherName!.substring(0, 1)
+                                  : 'U')
+                                  .toUpperCase(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            )
                           : null,
                     ),
                     Positioned(
@@ -681,7 +737,7 @@ class _HomePageState extends State<HomePage> {
           GestureDetector(
             onTap: _openProfileScreen,
             child: Text(
-              _studentName ?? _teacherName ?? 'Student $_rollNumber',
+              _studentName ?? _teacherName ?? 'User',
               style: TextStyle(
                 fontSize: isMobile ? 24 : 28,
                 fontWeight: FontWeight.bold,
@@ -720,7 +776,7 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ),
-              if (_studentGender != null)
+              if (_rollNumber != null)
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
@@ -730,10 +786,10 @@ class _HomePageState extends State<HomePage> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Icon(Icons.person, size: 14, color: Colors.white),
+                      Icon(Icons.numbers, size: 14, color: Colors.white),
                       const SizedBox(width: 6),
                       Text(
-                        _studentGender!,
+                        'Roll: $_rollNumber',
                         style: const TextStyle(fontSize: 12, color: Colors.white),
                       ),
                     ],
@@ -772,6 +828,25 @@ class _HomePageState extends State<HomePage> {
                       const SizedBox(width: 6),
                       Text(
                         'Sem $_selectedSemester',
+                        style: const TextStyle(fontSize: 12, color: Colors.white),
+                      ),
+                    ],
+                  ),
+                ),
+              if (_selectedSection != null)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.15),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(Icons.group, size: 14, color: Colors.white),
+                      const SizedBox(width: 6),
+                      Text(
+                        'Sec: $_selectedSection',
                         style: const TextStyle(fontSize: 12, color: Colors.white),
                       ),
                     ],
@@ -875,39 +950,37 @@ class _HomePageState extends State<HomePage> {
                       border: Border.all(color: Colors.white, width: 3),
                       gradient: (_selectedProfileImage == null && (_userPhotoUrl == null || _userPhotoUrl!.isEmpty))
                           ? LinearGradient(
-                        colors: [
-                          Colors.blue.shade300,
-                          Colors.purple.shade300,
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      )
+                              colors: [
+                                Colors.blue.shade300,
+                                Colors.purple.shade300,
+                              ],
+                              begin: Alignment.topLeft,
+                              end: Alignment.bottomRight,
+                            )
                           : null,
                       image: _getSidebarProfileDecorationImage(),
                     ),
                     child: (_selectedProfileImage == null && (_userPhotoUrl == null || _userPhotoUrl!.isEmpty))
                         ? Center(
-                      child: Text(
-                        (_studentName?.isNotEmpty == true
-                            ? _studentName!.substring(0, 1)
-                            : _teacherName?.isNotEmpty == true
-                            ? _teacherName!.substring(0, 1)
-                            : _rollNumber?.isNotEmpty == true
-                            ? _rollNumber!.substring(0, 1)
-                            : 'U')
-                            .toUpperCase(),
-                        style: TextStyle(
-                          fontSize: isMobile ? 28 : 36,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                    )
+                            child: Text(
+                              (_studentName?.isNotEmpty == true
+                                  ? _studentName!.substring(0, 1)
+                                  : _teacherName?.isNotEmpty == true
+                                  ? _teacherName!.substring(0, 1)
+                                  : 'U')
+                                  .toUpperCase(),
+                              style: TextStyle(
+                                fontSize: isMobile ? 28 : 36,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                          )
                         : null,
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    _studentName ?? _teacherName ?? 'Student $_rollNumber',
+                    _studentName ?? _teacherName ?? 'User',
                     style: TextStyle(
                       fontSize: isMobile ? 16 : 18,
                       fontWeight: FontWeight.bold,
@@ -998,12 +1071,26 @@ class _HomePageState extends State<HomePage> {
                             value: _selectedCourse!,
                             color: Colors.orange.shade700,
                           ),
+                        if (_selectedYear != null)
+                          _buildInfoCard(
+                            icon: Icons.calendar_month_outlined,
+                            title: 'Year',
+                            value: _selectedYear!,
+                            color: Colors.deepPurple.shade700,
+                          ),
                         if (_selectedSemester != null)
                           _buildInfoCard(
                             icon: Icons.numbers_outlined,
                             title: 'Semester',
                             value: 'Semester $_selectedSemester',
                             color: Colors.purple.shade700,
+                          ),
+                        if (_selectedSection != null)
+                          _buildInfoCard(
+                            icon: Icons.group_outlined,
+                            title: 'Section',
+                            value: _selectedSection!,
+                            color: Colors.teal.shade700,
                           ),
                         if (_studentGender != null)
                           _buildInfoCard(
@@ -1199,11 +1286,23 @@ class _HomePageState extends State<HomePage> {
                 title: const Text('Course'),
                 subtitle: Text(_selectedCourse!),
               ),
+            if (_selectedYear != null)
+              ListTile(
+                leading: const Icon(Icons.calendar_month),
+                title: const Text('Year'),
+                subtitle: Text(_selectedYear!),
+              ),
             if (_selectedSemester != null)
               ListTile(
                 leading: const Icon(Icons.calendar_today),
                 title: const Text('Semester'),
                 subtitle: Text('Semester $_selectedSemester'),
+              ),
+            if (_selectedSection != null)
+              ListTile(
+                leading: const Icon(Icons.group),
+                title: const Text('Section'),
+                subtitle: Text(_selectedSection!),
               ),
             if (_subjects != null && _subjects!.isNotEmpty)
               ListTile(
@@ -1246,8 +1345,8 @@ class _HomePageState extends State<HomePage> {
         title: const Text('About Campus Clock'),
         content: const Text(
           'Campus Clock v1.0.0\n\n'
-              'Shyam Lal College Timetable Management System\n'
-              'Developed for SLC students and faculty.',
+          'Shyam Lal College Timetable Management System\n'
+          'Developed for SLC students and faculty.',
         ),
         actions: [
           TextButton(
@@ -1294,24 +1393,6 @@ class _HomePageState extends State<HomePage> {
       backgroundColor: Colors.grey.shade50,
       body: isMobile
           ? SafeArea(
-        child: SingleChildScrollView(
-          physics: const BouncingScrollPhysics(),
-          child: Column(
-            children: [
-              _buildHeader(),
-              const SizedBox(height: 8),
-              _buildDashboardGrid(),
-              const SizedBox(height: 30),
-            ],
-          ),
-        ),
-      )
-          : SafeArea(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildUserSidebar(),
-            Expanded(
               child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
                 child: Column(
@@ -1323,10 +1404,28 @@ class _HomePageState extends State<HomePage> {
                   ],
                 ),
               ),
+            )
+          : SafeArea(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _buildUserSidebar(),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      child: Column(
+                        children: [
+                          _buildHeader(),
+                          const SizedBox(height: 8),
+                          _buildDashboardGrid(),
+                          const SizedBox(height: 30),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ],
-        ),
-      ),
     );
   }
 }
