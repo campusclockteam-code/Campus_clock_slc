@@ -47,12 +47,34 @@
             </intent-filter>
         </activity>
 
+        <!-- Flutter Embedding -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />
 
+        <!-- Firebase Messaging Configuration -->
         <meta-data
             android:name="com.google.firebase.messaging.default_notification_channel_id"
             android:value="campus_clock_channel" />
+            
+        <!-- Default notification icon (create this icon in res/drawable/) -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_icon"
+            android:resource="@drawable/ic_notification" />
+            
+        <!-- Default notification color -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_color"
+            android:resource="@color/colorAccent" />
+
+        <!-- FirebaseMessagingService to handle notifications -->
+        <service
+            android:name="com.google.firebase.messaging.FirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
     </application>
 </manifest>
