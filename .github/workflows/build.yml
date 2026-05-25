@@ -27,17 +27,17 @@ jobs:
     - name: Get dependencies
       run: flutter pub get
     
-    - name: Make gradlew executable
-      run: chmod +x android/gradlew
-    
-    - name: Build APK with Gradle
+    - name: Build APK
       run: |
-        cd android
-        ./gradlew assembleRelease
-        cd ..
+        flutter build apk --release
+        echo "=== Build directory contents ==="
+        ls -la build/app/outputs/flutter-apk/ || echo "Directory not found"
+        find . -name "*.apk" -type f || echo "No APK found"
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
         name: campus-clock-app
-        path: android/app/build/outputs/apk/release/*.apk
+        path: |
+          build/app/outputs/flutter-apk/*.apk
+          **/app-release.apk
