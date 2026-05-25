@@ -3,8 +3,8 @@ description: Campus Clock App for Shyam Lal College
 publish_to: 'none'
 
 environment:
-  sdk: '>=3.4.0 <4.0.0'
-  flutter: '>=3.22.0'
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: '>=3.19.0'
 
 dependencies:
   flutter:
