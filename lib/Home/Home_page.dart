@@ -52,22 +52,40 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _checkAdminStatus() async {
     final user = FirebaseAuth.instance.currentUser;
-    if (user != null && user.email?.toLowerCase() == 'surajncc2006@gmail.com') {
-      print('✅ Setting admin status for: ${user.email}');
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool('is_admin', true);
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
-        'isAdmin': true,
-        'email': user.email,
-        'displayName': 'Suraj',
-        'rollNumber': 'admin',
-        'role': 'admin',
-      }, SetOptions(merge: true));
-      setState(() {
-        _isAdmin = true;
-      });
-    } else {
-      print('❌ Not admin. User: ${user?.email}');
+    final prefs = await SharedPreferences.getInstance();
+
+    // Check for both admin email and hardcoded admin
+    if (user != null) {
+      final isAdminEmail =
+          user.email?.toLowerCase() == 'surajncc2006@gmail.com';
+      final isHardcodedAdmin =
+          user.email?.toLowerCase() == 'admin@campusclock.com';
+
+      if (isAdminEmail || isHardcodedAdmin) {
+        print('✅ Setting admin status for: ${user.email}');
+        await prefs.setBool('is_admin', true);
+        await prefs.setString('user_role', 'admin');
+        await prefs.setString('student_name', 'Admin');
+        await prefs.setString('user_name', 'Admin');
+
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'isAdmin': true,
+          'email': user.email,
+          'displayName': 'Admin',
+          'rollNumber': 'admin',
+          'role': 'admin',
+        }, SetOptions(merge: true));
+
+        setState(() {
+          _isAdmin = true;
+          _userRole = 'Admin';
+          if (_studentName == null) {
+            _studentName = 'Admin';
+          }
+        });
+      } else {
+        print('❌ Not admin. User: ${user.email}');
+      }
     }
   }
 
@@ -107,10 +125,18 @@ class _HomePageState extends State<HomePage> {
     final isAdminFromPrefs = prefs.getBool('is_admin') == true;
     final isAdminEmail = user?.email?.toLowerCase() == 'surajncc2006@gmail.com';
 
+    // Check for hardcoded admin email as well
+    final isHardcodedAdmin =
+        user?.email?.toLowerCase() == 'admin@campusclock.com';
+
     setState(() {
+      // Determine user role - FIXED for admin detection
       if (isTeacher) {
         _userRole = 'Teacher';
-      } else if (storedRole == 'admin' || isAdminFromPrefs || isAdminEmail) {
+      } else if (storedRole == 'admin' ||
+          isAdminFromPrefs ||
+          isAdminEmail ||
+          isHardcodedAdmin) {
         _userRole = 'Admin';
         _isAdmin = true;
       } else {
@@ -129,7 +155,23 @@ class _HomePageState extends State<HomePage> {
       _userEmail = user?.email ?? prefs.getString('email');
       _userId = user?.uid;
       _userPhotoUrl = user?.photoURL;
-      _isAdmin = isAdminFromPrefs || isAdminEmail || storedRole == 'admin';
+      _isAdmin = isAdminFromPrefs ||
+          isAdminEmail ||
+          isHardcodedAdmin ||
+          storedRole == 'admin';
+
+      // If studentName is null, try to get it from user's display name
+      if (_studentName == null && user?.displayName != null) {
+        _studentName = user!.displayName;
+      }
+      // If still null and is admin, set default
+      if (_studentName == null && _isAdmin) {
+        _studentName = 'Admin';
+      }
+      // If still null, set default user
+      if (_studentName == null) {
+        _studentName = 'User';
+      }
     });
 
     final profileImagePath = prefs.getString('profile_image_path');
@@ -150,28 +192,28 @@ class _HomePageState extends State<HomePage> {
           final data = doc.data();
           setState(() {
             // Update from Firestore
-            if (data?['displayName'] != null && _studentName == null) {
+            if (data?['displayName'] != null && _studentName == 'User') {
               _studentName = data?['displayName'];
             }
             if (data?['teacherName'] != null && _teacherName == null) {
               _teacherName = data?['teacherName'];
             }
-            if (data?['rollNumber'] != null) {
+            if (data?['rollNumber'] != null && _rollNumber == null) {
               _rollNumber = data?['rollNumber'];
             }
-            if (data?['course'] != null) {
+            if (data?['course'] != null && _selectedCourse == null) {
               _selectedCourse = data?['course'];
             }
-            if (data?['year'] != null) {
+            if (data?['year'] != null && _selectedYear == null) {
               _selectedYear = data?['year'];
             }
-            if (data?['semester'] != null) {
+            if (data?['semester'] != null && _selectedSemester == null) {
               _selectedSemester = _parseSemesterNumber(data?['semester']);
             }
-            if (data?['section'] != null) {
+            if (data?['section'] != null && _selectedSection == null) {
               _selectedSection = data?['section'];
             }
-            if (data?['gender'] != null) {
+            if (data?['gender'] != null && _studentGender == null) {
               _studentGender = data?['gender'];
             }
             if (_subjects == null || _subjects!.isEmpty) {
@@ -185,7 +227,7 @@ class _HomePageState extends State<HomePage> {
             }
           });
 
-          // Update SharedPreferences with latest data (No await needed here)
+          // Update SharedPreferences with latest data
           if (data?['rollNumber'] != null) {
             prefs.setString('roll_number', data?['rollNumber']);
           }
@@ -209,6 +251,10 @@ class _HomePageState extends State<HomePage> {
             prefs.setString('student_name', data?['displayName']);
             prefs.setString('user_name', data?['displayName']);
           }
+          if (data?['isAdmin'] == true) {
+            prefs.setBool('is_admin', true);
+            prefs.setString('user_role', 'admin');
+          }
         }
       } catch (e) {
         print('Error loading Firebase data: $e');
@@ -223,11 +269,13 @@ class _HomePageState extends State<HomePage> {
     print('Role: $_userRole');
     print('Admin: $_isAdmin');
     print('Student Name: $_studentName');
+    print('Teacher Name: $_teacherName');
     print('Roll Number: $_rollNumber');
     print('Course: $_selectedCourse');
     print('Year: $_selectedYear');
     print('Semester: $_selectedSemester');
     print('Section: $_selectedSection');
+    print('User Email: $_userEmail');
     print('===========================');
   }
 
@@ -452,8 +500,8 @@ class _HomePageState extends State<HomePage> {
     if (_isAdmin) {
       actions.add({
         'icon': Icons.admin_panel_settings,
-        'title': 'Admin',
-        'subtitle': 'Admin panel',
+        'title': 'Admin Panel',
+        'subtitle': 'Manage system',
         'color': Colors.red.shade700,
         'onTap': () {
           Navigator.pushNamed(context, '/admin');
@@ -777,7 +825,9 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ),
-              if (_rollNumber != null)
+              if (_rollNumber != null &&
+                  _rollNumber!.isNotEmpty &&
+                  _rollNumber != 'admin')
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -798,7 +848,7 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ),
-              if (_selectedCourse != null)
+              if (_selectedCourse != null && _selectedCourse!.isNotEmpty)
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -840,7 +890,7 @@ class _HomePageState extends State<HomePage> {
                     ],
                   ),
                 ),
-              if (_selectedSection != null)
+              if (_selectedSection != null && _selectedSection!.isNotEmpty)
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
@@ -1072,21 +1122,24 @@ class _HomePageState extends State<HomePage> {
                           value: _userEmail ?? 'Not provided',
                           color: Colors.blue.shade700,
                         ),
-                        if (_rollNumber != null)
+                        if (_rollNumber != null &&
+                            _rollNumber!.isNotEmpty &&
+                            _rollNumber != 'admin')
                           _buildInfoCard(
                             icon: Icons.badge_outlined,
                             title: 'Roll Number',
                             value: _rollNumber!,
                             color: Colors.green.shade700,
                           ),
-                        if (_selectedCourse != null)
+                        if (_selectedCourse != null &&
+                            _selectedCourse!.isNotEmpty)
                           _buildInfoCard(
                             icon: Icons.school_outlined,
                             title: 'Course',
                             value: _selectedCourse!,
                             color: Colors.orange.shade700,
                           ),
-                        if (_selectedYear != null)
+                        if (_selectedYear != null && _selectedYear!.isNotEmpty)
                           _buildInfoCard(
                             icon: Icons.calendar_month_outlined,
                             title: 'Year',
@@ -1100,14 +1153,16 @@ class _HomePageState extends State<HomePage> {
                             value: 'Semester $_selectedSemester',
                             color: Colors.purple.shade700,
                           ),
-                        if (_selectedSection != null)
+                        if (_selectedSection != null &&
+                            _selectedSection!.isNotEmpty)
                           _buildInfoCard(
                             icon: Icons.group_outlined,
                             title: 'Section',
                             value: _selectedSection!,
                             color: Colors.teal.shade700,
                           ),
-                        if (_studentGender != null)
+                        if (_studentGender != null &&
+                            _studentGender!.isNotEmpty)
                           _buildInfoCard(
                             icon: Icons.person_outline,
                             title: 'Gender',
@@ -1297,13 +1352,13 @@ class _HomePageState extends State<HomePage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (_selectedCourse != null)
+            if (_selectedCourse != null && _selectedCourse!.isNotEmpty)
               ListTile(
                 leading: const Icon(Icons.school),
                 title: const Text('Course'),
                 subtitle: Text(_selectedCourse!),
               ),
-            if (_selectedYear != null)
+            if (_selectedYear != null && _selectedYear!.isNotEmpty)
               ListTile(
                 leading: const Icon(Icons.calendar_month),
                 title: const Text('Year'),
@@ -1315,7 +1370,7 @@ class _HomePageState extends State<HomePage> {
                 title: const Text('Semester'),
                 subtitle: Text('Semester $_selectedSemester'),
               ),
-            if (_selectedSection != null)
+            if (_selectedSection != null && _selectedSection!.isNotEmpty)
               ListTile(
                 leading: const Icon(Icons.group),
                 title: const Text('Section'),

@@ -25,7 +25,7 @@ class _LoginPageState extends State<LoginPage> {
   String _successMessage = '';
   Timer? _successTimer;
 
-  // Hardcoded admin credentials
+  // Hardcoded admin credential
   static const String adminUsername = 'Admin';
   static const String adminEmail = 'admin@campusclock.com';
   static const String adminPassword = '20170024656';
@@ -89,26 +89,41 @@ class _LoginPageState extends State<LoginPage> {
       String password = _passwordController.text.trim();
 
       // CHECK FOR ADMIN - BOTH USERNAME AND EMAIL
-      if ((identifier == adminUsername || identifier == adminEmail) && password == adminPassword) {
+      if ((identifier == adminUsername || identifier == adminEmail) &&
+          password == adminPassword) {
         print('✅ Admin logged in');
-        
+
         final prefs = await SharedPreferences.getInstance();
+
+        // Clear all previous data first
+        await prefs.clear();
+
+        // Set ALL admin data - make sure every field HomePage needs is set
         await prefs.setBool('has_logged_in', true);
         await prefs.setString('user_name', 'Admin');
         await prefs.setString('user_email', 'admin@campusclock.com');
         await prefs.setBool('is_admin', true);
         await prefs.setBool('is_teacher', false);
+        await prefs.setBool('is_guest', false);
         await prefs.setString('user_role', 'admin');
-        
+        await prefs.setString('student_name', 'Admin');
+        await prefs.setString('user_gender', 'Other');
+
+        // Clear any student/teacher specific data
         await prefs.remove('roll_number');
         await prefs.remove('selected_course');
         await prefs.remove('selected_semester');
-        await prefs.remove('student_name');
         await prefs.remove('student_gender');
         await prefs.remove('teacher_name');
-        await prefs.remove('user_id');
-        await prefs.remove('profile_photo_url');
-        
+
+        // Verify admin data was saved
+        print('=== Admin Data Saved ===');
+        print('is_admin: ${prefs.getBool('is_admin')}');
+        print('user_role: ${prefs.getString('user_role')}');
+        print('user_name: ${prefs.getString('user_name')}');
+        print('student_name: ${prefs.getString('student_name')}');
+        print('========================');
+
         FCMService.showCustomNotification(
           title: 'Admin Login 👑',
           body: 'Welcome to Admin Dashboard!',
@@ -116,9 +131,11 @@ class _LoginPageState extends State<LoginPage> {
         );
         _showSuccessMessage('Welcome Admin!');
         await Future.delayed(const Duration(milliseconds: 1500));
-        
+
         if (mounted) {
-          Navigator.of(context).pushNamedAndRemoveUntil('/admin', (route) => false);
+          // Navigate to home - HomePage will detect admin role
+          Navigator.of(context)
+              .pushNamedAndRemoveUntil('/home', (route) => false);
         }
         return;
       }
@@ -138,13 +155,13 @@ class _LoginPageState extends State<LoginPage> {
       // Check if identifier is email format
       else if (RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(identifier)) {
         email = identifier;
-      }
-      else {
+      } else {
         _showError('Please enter a valid email, roll number, or "Admin"');
         return;
       }
 
-      UserCredential userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
+      UserCredential userCredential =
+          await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -172,50 +189,79 @@ class _LoginPageState extends State<LoginPage> {
         role = userData['role'] ?? 'student';
       }
 
-      String displayName = userData['displayName'] ?? 
+      String displayName = userData['displayName'] ??
           (userData['teacherName'] ?? userData['studentName'] ?? 'User');
 
       final prefs = await SharedPreferences.getInstance();
 
+      // Clear previous data
+      await prefs.clear();
+
+      // Set basic user info
       await prefs.setBool('has_logged_in', true);
       await prefs.setString('user_email', email);
       await prefs.setString('user_name', displayName);
       await prefs.setString('user_gender', userData['gender'] ?? 'Other');
       await prefs.setBool('is_teacher', role == 'teacher');
       await prefs.setBool('is_admin', isAdmin);
-      await prefs.remove('is_guest');
+      await prefs.setBool('is_guest', false);
       await prefs.setString('user_id', userCredential.user!.uid);
-      await prefs.setString('profile_photo_url', userData['profilePhotoUrl'] ?? '');
+      await prefs.setString(
+          'profile_photo_url', userData['profilePhotoUrl'] ?? '');
       await prefs.setString('user_role', role);
 
       // Store role-specific data
       if (role == 'student') {
-        await prefs.setString('roll_number', userData['rollNumber'] ?? '');
-        await prefs.setString('selected_course', userData['course'] ?? '');
-        await prefs.setInt('selected_semester', _parseSemesterNumber(userData['semester']));
-        await prefs.setString('selected_year', userData['year'] ?? '');
-        await prefs.setString('selected_section', userData['section'] ?? '');
+        final rollNumber =
+            userData['rollNumber'] ?? (userData['rollNo']?.toString() ?? '');
+        final course = userData['course'] ?? '';
+        final semester =
+            userData['semester'] ?? userData['currentSemester'] ?? 1;
+        final year = userData['year'] ?? '';
+        final section = userData['section'] ?? '';
+
+        await prefs.setString('roll_number', rollNumber);
+        await prefs.setString('selected_course', course);
+        await prefs.setInt('selected_semester', _parseSemesterNumber(semester));
+        await prefs.setString('selected_year', year);
+        await prefs.setString('selected_section', section);
         await prefs.setString('student_name', displayName);
         await prefs.setString('student_gender', userData['gender'] ?? '');
         await prefs.remove('teacher_name');
+
+        print('✅ Student data saved:');
+        print('   Roll Number: $rollNumber');
+        print('   Course: $course');
+        print('   Semester: $semester');
+        print('   Year: $year');
+        print('   Section: $section');
       } else if (role == 'teacher') {
-        await prefs.setString('teacher_name', userData['teacherName'] ?? displayName);
+        final teacherName = userData['teacherName'] ?? displayName;
+        await prefs.setString('teacher_name', teacherName);
+        await prefs.setString('student_name', teacherName);
         await prefs.remove('roll_number');
         await prefs.remove('selected_course');
         await prefs.remove('selected_year');
         await prefs.remove('selected_semester');
         await prefs.remove('selected_section');
-        await prefs.remove('student_name');
         await prefs.remove('student_gender');
+        print('✅ Teacher data saved: $teacherName');
       } else if (role == 'admin') {
+        await prefs.setString('student_name', 'Admin');
         await prefs.remove('roll_number');
         await prefs.remove('selected_course');
         await prefs.remove('selected_year');
         await prefs.remove('selected_semester');
         await prefs.remove('selected_section');
-        await prefs.remove('student_name');
         await prefs.remove('student_gender');
         await prefs.remove('teacher_name');
+        print('✅ Admin data saved');
+      }
+
+      // Also store subjects if available
+      if (userData['subjects'] != null) {
+        List<String> subjects = List<String>.from(userData['subjects']);
+        await prefs.setStringList('selected_subjects', subjects);
       }
 
       await FirebaseFirestore.instance
@@ -224,6 +270,15 @@ class _LoginPageState extends State<LoginPage> {
           .update({
         'lastLoginAt': FieldValue.serverTimestamp(),
       });
+
+      // Verify data was saved
+      print('=== User Data Saved ===');
+      print('user_role: ${prefs.getString('user_role')}');
+      print('is_admin: ${prefs.getBool('is_admin')}');
+      print('is_teacher: ${prefs.getBool('is_teacher')}');
+      print('user_name: ${prefs.getString('user_name')}');
+      print('student_name: ${prefs.getString('student_name')}');
+      print('========================');
 
       FCMService.showCustomNotification(
         title: 'Welcome Back! 👋',
@@ -235,11 +290,9 @@ class _LoginPageState extends State<LoginPage> {
       await Future.delayed(const Duration(milliseconds: 1500));
 
       if (mounted) {
-        if (isAdmin) {
-          Navigator.of(context).pushNamedAndRemoveUntil('/admin', (route) => false);
-        } else {
-          Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
-        }
+        // Always navigate to home, HomePage will handle role-based display
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil('/home', (route) => false);
       }
     } on FirebaseAuthException catch (e) {
       String message;
@@ -277,21 +330,16 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _loading = true);
     try {
       final prefs = await SharedPreferences.getInstance();
+      await prefs.clear();
+
       await prefs.setBool('has_logged_in', true);
       await prefs.setString('user_name', 'Guest');
+      await prefs.setString('student_name', 'Guest');
       await prefs.setString('user_gender', 'Other');
       await prefs.setBool('is_guest', true);
       await prefs.setBool('is_admin', false);
       await prefs.setBool('is_teacher', false);
       await prefs.setString('user_role', 'guest');
-      await prefs.remove('roll_number');
-      await prefs.remove('selected_course');
-      await prefs.remove('selected_semester');
-      await prefs.remove('student_name');
-      await prefs.remove('student_gender');
-      await prefs.remove('teacher_name');
-      await prefs.remove('user_id');
-      await prefs.remove('profile_photo_url');
 
       FCMService.showCustomNotification(
         title: 'Guest Mode 👤',
@@ -301,7 +349,8 @@ class _LoginPageState extends State<LoginPage> {
       _showSuccessMessage('Welcome Guest!');
       await Future.delayed(const Duration(milliseconds: 1500));
       if (mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil('/home', (route) => false);
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil('/home', (route) => false);
       }
     } catch (e) {
       _showError('Guest login failed');
@@ -359,7 +408,8 @@ class _LoginPageState extends State<LoginPage> {
                       height: 120,
                       padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(colors: [Color(0xFF667EEA), Color(0xFF764BA2)]),
+                        gradient: const LinearGradient(
+                            colors: [Color(0xFF667EEA), Color(0xFF764BA2)]),
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
@@ -371,14 +421,18 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                       child: SvgPicture.asset(
                         'assets/logo/app_logo.svg',
-                        colorFilter: const ColorFilter.mode(Colors.white, BlendMode.srcIn),
+                        colorFilter: const ColorFilter.mode(
+                            Colors.white, BlendMode.srcIn),
                       ),
                     ),
                   ),
                   const SizedBox(height: 30),
                   const Text(
                     'Campus Clock',
-                    style: TextStyle(fontSize: 38, fontWeight: FontWeight.bold, color: Colors.white),
+                    style: TextStyle(
+                        fontSize: 38,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white),
                     textAlign: TextAlign.center,
                   ),
                   const SizedBox(height: 8),
@@ -407,11 +461,17 @@ class _LoginPageState extends State<LoginPage> {
                     icon: Icons.lock,
                     obscureText: _obscurePassword,
                     suffixIcon: IconButton(
-                      icon: Icon(_obscurePassword ? Icons.visibility : Icons.visibility_off, color: Colors.grey),
-                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                      icon: Icon(
+                          _obscurePassword
+                              ? Icons.visibility
+                              : Icons.visibility_off,
+                          color: Colors.grey),
+                      onPressed: () =>
+                          setState(() => _obscurePassword = !_obscurePassword),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty) return 'Password is required';
+                      if (value == null || value.isEmpty)
+                        return 'Password is required';
                       return null;
                     },
                   ),
@@ -420,15 +480,20 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: _loading ? null : _guestLogin,
-                    style: TextButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 16)),
+                    style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16)),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        Icon(Icons.person_outline, color: Colors.white.withOpacity(0.8)),
+                        Icon(Icons.person_outline,
+                            color: Colors.white.withOpacity(0.8)),
                         const SizedBox(width: 8),
                         Text(
                           'Continue as Guest',
-                          style: TextStyle(fontSize: 16, color: Colors.white.withOpacity(0.8), fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.white.withOpacity(0.8),
+                              fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -437,10 +502,14 @@ class _LoginPageState extends State<LoginPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      const Text("Don't have an account? ", style: TextStyle(color: Colors.white70)),
+                      const Text("Don't have an account? ",
+                          style: TextStyle(color: Colors.white70)),
                       TextButton(
                         onPressed: _navigateToSignup,
-                        child: const Text('Sign up', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                        child: const Text('Sign up',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold)),
                       ),
                     ],
                   ),
@@ -460,12 +529,15 @@ class _LoginPageState extends State<LoginPage> {
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Icon(Icons.check_circle, color: Colors.green, size: 60),
+                          const Icon(Icons.check_circle,
+                              color: Colors.green, size: 60),
                           const SizedBox(height: 16),
-                          Text(_successMessage, style: const TextStyle(fontSize: 18)),
+                          Text(_successMessage,
+                              style: const TextStyle(fontSize: 18)),
                           const SizedBox(height: 16),
                           ElevatedButton(
-                            onPressed: () => setState(() => _showSuccess = false),
+                            onPressed: () =>
+                                setState(() => _showSuccess = false),
                             child: const Text('Continue'),
                           ),
                         ],
@@ -491,7 +563,12 @@ class _LoginPageState extends State<LoginPage> {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 15, spreadRadius: 2)],
+        boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 15,
+              spreadRadius: 2)
+        ],
       ),
       child: TextFormField(
         controller: controller,
@@ -522,17 +599,23 @@ class _LoginPageState extends State<LoginPage> {
         style: ElevatedButton.styleFrom(
           backgroundColor: Colors.blue,
           foregroundColor: Colors.white,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
           elevation: 5,
         ),
         child: _loading
-            ? const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(strokeWidth: 2))
+            ? const SizedBox(
+                width: 24,
+                height: 24,
+                child: CircularProgressIndicator(strokeWidth: 2))
             : const Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Icon(Icons.login, size: 24),
                   SizedBox(width: 12),
-                  Text('Login to Continue', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
+                  Text('Login to Continue',
+                      style:
+                          TextStyle(fontSize: 18, fontWeight: FontWeight.w600)),
                 ],
               ),
       ),
