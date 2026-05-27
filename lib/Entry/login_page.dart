@@ -142,7 +142,6 @@ class _LoginPageState extends State<LoginPage> {
           );
           print('✅ Admin signed in to Firebase Auth');
         } catch (e) {
-          // If admin doesn't exist, create it
           print('Admin not found in Auth, creating...');
           adminCredential =
               await FirebaseAuth.instance.createUserWithEmailAndPassword(
@@ -152,7 +151,6 @@ class _LoginPageState extends State<LoginPage> {
           print('✅ Admin created in Firebase Auth');
         }
 
-        // Setup admin in Firestore
         if (adminCredential != null) {
           await _setupAdminInFirestore(adminCredential);
         }
