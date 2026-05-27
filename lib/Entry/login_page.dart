@@ -25,7 +25,7 @@ class _LoginPageState extends State<LoginPage> {
   String _successMessage = '';
   Timer? _successTimer;
 
-  // Hardcoded admin credential
+  // Hardcoded admin credentials
   static const String adminUsername = 'Admin';
   static const String adminEmail = 'admin@campusclock.com';
   static const String adminPassword = '20170024656';
@@ -80,6 +80,44 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  Future<void> _setupAdminInFirestore(UserCredential adminCredential) async {
+    try {
+      // Create/update admin user in Firestore
+      await FirebaseFirestore.instance
+          .collection('users')
+          .doc(adminCredential.user!.uid)
+          .set({
+        'isAdmin': true,
+        'role': 'admin',
+        'email': adminEmail,
+        'displayName': 'Admin',
+        'userName': 'Admin',
+        'studentName': 'Admin',
+        'createdAt': FieldValue.serverTimestamp(),
+        'lastLoginAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+
+      print('✅ Admin user created/updated in Firestore');
+
+      // Also create in students collection for any student-related queries
+      await FirebaseFirestore.instance
+          .collection('students')
+          .doc(adminCredential.user!.uid)
+          .set({
+        'isAdmin': true,
+        'role': 'admin',
+        'email': adminEmail,
+        'displayName': 'Admin',
+        'name': 'Admin',
+        'rollNo': 'ADMIN001',
+      }, SetOptions(merge: true));
+
+      print('✅ Admin also added to students collection');
+    } catch (e) {
+      print('Error setting up admin in Firestore: $e');
+    }
+  }
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -93,21 +131,48 @@ class _LoginPageState extends State<LoginPage> {
           password == adminPassword) {
         print('✅ Admin logged in');
 
+        // Sign in or create admin in Firebase Auth
+        UserCredential? adminCredential;
+        try {
+          // Try to sign in existing admin
+          adminCredential =
+              await FirebaseAuth.instance.signInWithEmailAndPassword(
+            email: adminEmail,
+            password: adminPassword,
+          );
+          print('✅ Admin signed in to Firebase Auth');
+        } catch (e) {
+          // If admin doesn't exist, create it
+          print('Admin not found in Auth, creating...');
+          adminCredential =
+              await FirebaseAuth.instance.createUserWithEmailAndPassword(
+            email: adminEmail,
+            password: adminPassword,
+          );
+          print('✅ Admin created in Firebase Auth');
+        }
+
+        // Setup admin in Firestore
+        if (adminCredential != null) {
+          await _setupAdminInFirestore(adminCredential);
+        }
+
         final prefs = await SharedPreferences.getInstance();
 
         // Clear all previous data first
         await prefs.clear();
 
-        // Set ALL admin data - make sure every field HomePage needs is set
+        // Set ALL admin data
         await prefs.setBool('has_logged_in', true);
         await prefs.setString('user_name', 'Admin');
-        await prefs.setString('user_email', 'admin@campusclock.com');
+        await prefs.setString('user_email', adminEmail);
         await prefs.setBool('is_admin', true);
         await prefs.setBool('is_teacher', false);
         await prefs.setBool('is_guest', false);
         await prefs.setString('user_role', 'admin');
         await prefs.setString('student_name', 'Admin');
         await prefs.setString('user_gender', 'Other');
+        await prefs.setString('user_id', adminCredential.user!.uid);
 
         // Clear any student/teacher specific data
         await prefs.remove('roll_number');
@@ -122,6 +187,8 @@ class _LoginPageState extends State<LoginPage> {
         print('user_role: ${prefs.getString('user_role')}');
         print('user_name: ${prefs.getString('user_name')}');
         print('student_name: ${prefs.getString('student_name')}');
+        print('user_email: ${prefs.getString('user_email')}');
+        print('user_id: ${prefs.getString('user_id')}');
         print('========================');
 
         FCMService.showCustomNotification(
@@ -209,6 +276,7 @@ class _LoginPageState extends State<LoginPage> {
       await prefs.setString(
           'profile_photo_url', userData['profilePhotoUrl'] ?? '');
       await prefs.setString('user_role', role);
+      await prefs.setString('student_name', displayName);
 
       // Store role-specific data
       if (role == 'student') {
@@ -225,7 +293,6 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.setInt('selected_semester', _parseSemesterNumber(semester));
         await prefs.setString('selected_year', year);
         await prefs.setString('selected_section', section);
-        await prefs.setString('student_name', displayName);
         await prefs.setString('student_gender', userData['gender'] ?? '');
         await prefs.remove('teacher_name');
 
@@ -238,7 +305,6 @@ class _LoginPageState extends State<LoginPage> {
       } else if (role == 'teacher') {
         final teacherName = userData['teacherName'] ?? displayName;
         await prefs.setString('teacher_name', teacherName);
-        await prefs.setString('student_name', teacherName);
         await prefs.remove('roll_number');
         await prefs.remove('selected_course');
         await prefs.remove('selected_year');
@@ -247,7 +313,6 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.remove('student_gender');
         print('✅ Teacher data saved: $teacherName');
       } else if (role == 'admin') {
-        await prefs.setString('student_name', 'Admin');
         await prefs.remove('roll_number');
         await prefs.remove('selected_course');
         await prefs.remove('selected_year');
@@ -278,6 +343,7 @@ class _LoginPageState extends State<LoginPage> {
       print('is_teacher: ${prefs.getBool('is_teacher')}');
       print('user_name: ${prefs.getString('user_name')}');
       print('student_name: ${prefs.getString('student_name')}');
+      print('user_email: ${prefs.getString('user_email')}');
       print('========================');
 
       FCMService.showCustomNotification(
@@ -304,6 +370,8 @@ class _LoginPageState extends State<LoginPage> {
         message = 'Invalid email format';
       } else if (e.code == 'user-disabled') {
         message = 'This account has been disabled';
+      } else if (e.code == 'email-already-in-use') {
+        message = 'Email already in use';
       } else {
         message = 'Authentication failed: ${e.message}';
       }
