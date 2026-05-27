@@ -25,7 +25,6 @@ class _LoginPageState extends State<LoginPage> {
   String _successMessage = '';
   Timer? _successTimer;
 
-  // Hardcoded admin credentials
   static const String adminUsername = 'Admin';
   static const String adminEmail = 'admin@campusclock.com';
   static const String adminPassword = '20170024656';
@@ -34,6 +33,21 @@ class _LoginPageState extends State<LoginPage> {
   void initState() {
     super.initState();
     _initializeFCM();
+    _checkAlreadyLoggedIn();
+  }
+
+  Future<void> _checkAlreadyLoggedIn() async {
+    final prefs = await SharedPreferences.getInstance();
+    final isLoggedIn = prefs.getBool('has_logged_in') ?? false;
+    final isAdmin = prefs.getBool('is_admin') ?? false;
+
+    if (isLoggedIn) {
+      print('User already logged in, navigating to home...');
+      if (mounted) {
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil('/home', (route) => false);
+      }
+    }
   }
 
   Future<void> _initializeFCM() async {
@@ -82,7 +96,6 @@ class _LoginPageState extends State<LoginPage> {
 
   Future<void> _setupAdminInFirestore(UserCredential adminCredential) async {
     try {
-      // Create/update admin user in Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(adminCredential.user!.uid)
@@ -99,7 +112,6 @@ class _LoginPageState extends State<LoginPage> {
 
       print('✅ Admin user created/updated in Firestore');
 
-      // Also create in students collection for any student-related queries
       await FirebaseFirestore.instance
           .collection('students')
           .doc(adminCredential.user!.uid)
@@ -126,15 +138,13 @@ class _LoginPageState extends State<LoginPage> {
       String identifier = _identifierController.text.trim();
       String password = _passwordController.text.trim();
 
-      // CHECK FOR ADMIN - BOTH USERNAME AND EMAIL
+      // ADMIN LOGIN
       if ((identifier == adminUsername || identifier == adminEmail) &&
           password == adminPassword) {
-        print('✅ Admin logged in');
+        print('✅ Processing admin login...');
 
-        // Sign in or create admin in Firebase Auth
         UserCredential? adminCredential;
         try {
-          // Try to sign in existing admin
           adminCredential =
               await FirebaseAuth.instance.signInWithEmailAndPassword(
             email: adminEmail,
@@ -157,10 +167,7 @@ class _LoginPageState extends State<LoginPage> {
 
         final prefs = await SharedPreferences.getInstance();
 
-        // Clear all previous data first
-        await prefs.clear();
-
-        // Set ALL admin data
+        // DON'T clear all preferences - just update them
         await prefs.setBool('has_logged_in', true);
         await prefs.setString('user_name', 'Admin');
         await prefs.setString('user_email', adminEmail);
@@ -170,45 +177,30 @@ class _LoginPageState extends State<LoginPage> {
         await prefs.setString('user_role', 'admin');
         await prefs.setString('student_name', 'Admin');
         await prefs.setString('user_gender', 'Other');
-        await prefs.setString('user_id', adminCredential.user!.uid);
+        await prefs.setString('user_id', adminCredential!.user!.uid);
 
-        // Clear any student/teacher specific data
-        await prefs.remove('roll_number');
-        await prefs.remove('selected_course');
-        await prefs.remove('selected_semester');
-        await prefs.remove('student_gender');
-        await prefs.remove('teacher_name');
+        // Set a flag to prevent auto-logout
+        await prefs.setString(
+            'last_login_time', DateTime.now().toIso8601String());
 
-        // Verify admin data was saved
         print('=== Admin Data Saved ===');
         print('is_admin: ${prefs.getBool('is_admin')}');
         print('user_role: ${prefs.getString('user_role')}');
-        print('user_name: ${prefs.getString('user_name')}');
-        print('student_name: ${prefs.getString('student_name')}');
-        print('user_email: ${prefs.getString('user_email')}');
         print('user_id: ${prefs.getString('user_id')}');
         print('========================');
 
-        FCMService.showCustomNotification(
-          title: 'Admin Login 👑',
-          body: 'Welcome to Admin Dashboard!',
-          context: context,
-        );
         _showSuccessMessage('Welcome Admin!');
         await Future.delayed(const Duration(milliseconds: 1500));
 
         if (mounted) {
-          // Navigate to home - HomePage will detect admin role
-          Navigator.of(context)
-              .pushNamedAndRemoveUntil('/home', (route) => false);
+          // Use pushReplacement instead of pushNamedAndRemoveUntil for better navigation
+          Navigator.of(context).pushReplacementNamed('/home');
         }
         return;
       }
 
-      // For regular users - determine if identifier is roll number or email
+      // REGULAR USER LOGIN
       String email;
-
-      // Check if identifier is numeric (roll number)
       if (RegExp(r'^\d+$').hasMatch(identifier)) {
         final foundEmail = await _getEmailFromRollNumber(identifier);
         if (foundEmail == null) {
@@ -216,9 +208,7 @@ class _LoginPageState extends State<LoginPage> {
           return;
         }
         email = foundEmail;
-      }
-      // Check if identifier is email format
-      else if (RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(identifier)) {
+      } else if (RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(identifier)) {
         email = identifier;
       } else {
         _showError('Please enter a valid email, roll number, or "Admin"');
@@ -243,88 +233,29 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
-
-      bool isAdmin = userData['isAdmin'] == true ||
-          email.toLowerCase() == 'surajncc2006@gmail.com';
-
-      String role = 'student';
-      if (isAdmin) {
-        role = 'admin';
-      } else {
-        role = userData['role'] ?? 'student';
-      }
-
-      String displayName = userData['displayName'] ??
-          (userData['teacherName'] ?? userData['studentName'] ?? 'User');
+      bool isAdmin = userData['isAdmin'] == true;
+      String role = userData['role'] ?? 'student';
+      String displayName =
+          userData['displayName'] ?? userData['studentName'] ?? 'User';
 
       final prefs = await SharedPreferences.getInstance();
 
-      // Clear previous data
-      await prefs.clear();
-
-      // Set basic user info
       await prefs.setBool('has_logged_in', true);
       await prefs.setString('user_email', email);
       await prefs.setString('user_name', displayName);
-      await prefs.setString('user_gender', userData['gender'] ?? 'Other');
-      await prefs.setBool('is_teacher', role == 'teacher');
       await prefs.setBool('is_admin', isAdmin);
-      await prefs.setBool('is_guest', false);
-      await prefs.setString('user_id', userCredential.user!.uid);
-      await prefs.setString(
-          'profile_photo_url', userData['profilePhotoUrl'] ?? '');
+      await prefs.setBool('is_teacher', role == 'teacher');
       await prefs.setString('user_role', role);
       await prefs.setString('student_name', displayName);
+      await prefs.setString('user_id', userCredential.user!.uid);
+      await prefs.setString(
+          'last_login_time', DateTime.now().toIso8601String());
 
-      // Store role-specific data
       if (role == 'student') {
-        final rollNumber =
-            userData['rollNumber'] ?? (userData['rollNo']?.toString() ?? '');
-        final course = userData['course'] ?? '';
-        final semester =
-            userData['semester'] ?? userData['currentSemester'] ?? 1;
-        final year = userData['year'] ?? '';
-        final section = userData['section'] ?? '';
-
-        await prefs.setString('roll_number', rollNumber);
-        await prefs.setString('selected_course', course);
-        await prefs.setInt('selected_semester', _parseSemesterNumber(semester));
-        await prefs.setString('selected_year', year);
-        await prefs.setString('selected_section', section);
-        await prefs.setString('student_gender', userData['gender'] ?? '');
-        await prefs.remove('teacher_name');
-
-        print('✅ Student data saved:');
-        print('   Roll Number: $rollNumber');
-        print('   Course: $course');
-        print('   Semester: $semester');
-        print('   Year: $year');
-        print('   Section: $section');
-      } else if (role == 'teacher') {
-        final teacherName = userData['teacherName'] ?? displayName;
-        await prefs.setString('teacher_name', teacherName);
-        await prefs.remove('roll_number');
-        await prefs.remove('selected_course');
-        await prefs.remove('selected_year');
-        await prefs.remove('selected_semester');
-        await prefs.remove('selected_section');
-        await prefs.remove('student_gender');
-        print('✅ Teacher data saved: $teacherName');
-      } else if (role == 'admin') {
-        await prefs.remove('roll_number');
-        await prefs.remove('selected_course');
-        await prefs.remove('selected_year');
-        await prefs.remove('selected_semester');
-        await prefs.remove('selected_section');
-        await prefs.remove('student_gender');
-        await prefs.remove('teacher_name');
-        print('✅ Admin data saved');
-      }
-
-      // Also store subjects if available
-      if (userData['subjects'] != null) {
-        List<String> subjects = List<String>.from(userData['subjects']);
-        await prefs.setStringList('selected_subjects', subjects);
+        await prefs.setString('roll_number', userData['rollNumber'] ?? '');
+        await prefs.setString('selected_course', userData['course'] ?? '');
+        await prefs.setInt(
+            'selected_semester', _parseSemesterNumber(userData['semester']));
       }
 
       await FirebaseFirestore.instance
@@ -334,44 +265,26 @@ class _LoginPageState extends State<LoginPage> {
         'lastLoginAt': FieldValue.serverTimestamp(),
       });
 
-      // Verify data was saved
-      print('=== User Data Saved ===');
-      print('user_role: ${prefs.getString('user_role')}');
-      print('is_admin: ${prefs.getBool('is_admin')}');
-      print('is_teacher: ${prefs.getBool('is_teacher')}');
-      print('user_name: ${prefs.getString('user_name')}');
-      print('student_name: ${prefs.getString('student_name')}');
-      print('user_email: ${prefs.getString('user_email')}');
-      print('========================');
-
-      FCMService.showCustomNotification(
-        title: 'Welcome Back! 👋',
-        body: 'Good to see you again, $displayName!',
-        context: context,
-      );
-
       _showSuccessMessage('Welcome back $displayName!');
       await Future.delayed(const Duration(milliseconds: 1500));
 
       if (mounted) {
-        // Always navigate to home, HomePage will handle role-based display
-        Navigator.of(context)
-            .pushNamedAndRemoveUntil('/home', (route) => false);
+        Navigator.of(context).pushReplacementNamed('/home');
       }
     } on FirebaseAuthException catch (e) {
       String message;
-      if (e.code == 'user-not-found') {
-        message = 'No account found with this email/roll number';
-      } else if (e.code == 'wrong-password') {
-        message = 'Incorrect password';
-      } else if (e.code == 'invalid-email') {
-        message = 'Invalid email format';
-      } else if (e.code == 'user-disabled') {
-        message = 'This account has been disabled';
-      } else if (e.code == 'email-already-in-use') {
-        message = 'Email already in use';
-      } else {
-        message = 'Authentication failed: ${e.message}';
+      switch (e.code) {
+        case 'user-not-found':
+          message = 'No account found with this email/roll number';
+          break;
+        case 'wrong-password':
+          message = 'Incorrect password';
+          break;
+        case 'invalid-email':
+          message = 'Invalid email format';
+          break;
+        default:
+          message = 'Authentication failed: ${e.message}';
       }
       _showError(message);
     } catch (e) {
@@ -385,38 +298,29 @@ class _LoginPageState extends State<LoginPage> {
   int _parseSemesterNumber(dynamic semester) {
     if (semester == null) return 1;
     if (semester is int) return semester;
-    if (semester is String) {
-      final match = RegExp(r'\d+').firstMatch(semester);
-      return match != null ? int.parse(match.group(0)!) : 1;
-    }
-    return 1;
+    final match = RegExp(r'\d+').firstMatch(semester.toString());
+    return match != null ? int.parse(match.group(0)!) : 1;
   }
 
   Future<void> _guestLogin() async {
     setState(() => _loading = true);
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.clear();
 
       await prefs.setBool('has_logged_in', true);
       await prefs.setString('user_name', 'Guest');
       await prefs.setString('student_name', 'Guest');
-      await prefs.setString('user_gender', 'Other');
       await prefs.setBool('is_guest', true);
       await prefs.setBool('is_admin', false);
       await prefs.setBool('is_teacher', false);
       await prefs.setString('user_role', 'guest');
+      await prefs.setString(
+          'last_login_time', DateTime.now().toIso8601String());
 
-      FCMService.showCustomNotification(
-        title: 'Guest Mode 👤',
-        body: 'You are browsing as a guest. Sign up for full access!',
-        context: context,
-      );
       _showSuccessMessage('Welcome Guest!');
       await Future.delayed(const Duration(milliseconds: 1500));
       if (mounted) {
-        Navigator.of(context)
-            .pushNamedAndRemoveUntil('/home', (route) => false);
+        Navigator.of(context).pushReplacementNamed('/home');
       }
     } catch (e) {
       _showError('Guest login failed');
@@ -515,7 +419,7 @@ class _LoginPageState extends State<LoginPage> {
                     hintText: 'Enter email, roll number, or "Admin"',
                     validator: (value) {
                       if (value == null || value.trim().isEmpty) {
-                        return 'Email, roll number, or Admin is required';
+                        return 'Required';
                       }
                       return null;
                     },
@@ -536,8 +440,7 @@ class _LoginPageState extends State<LoginPage> {
                           setState(() => _obscurePassword = !_obscurePassword),
                     ),
                     validator: (value) {
-                      if (value == null || value.isEmpty)
-                        return 'Password is required';
+                      if (value == null || value.isEmpty) return 'Required';
                       return null;
                     },
                   ),
@@ -546,8 +449,6 @@ class _LoginPageState extends State<LoginPage> {
                   const SizedBox(height: 16),
                   TextButton(
                     onPressed: _loading ? null : _guestLogin,
-                    style: TextButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16)),
                     child: Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -579,7 +480,6 @@ class _LoginPageState extends State<LoginPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 40),
                 ],
               ),
             ),
