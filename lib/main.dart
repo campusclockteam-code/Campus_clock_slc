@@ -11,19 +11,70 @@ import 'Home/Home_page.dart';
 import 'Admin/AdminScreen.dart';
 import 'Timetable/home_screen.dart';
 
+// Handle background messages
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp();
+  print('Handling a background message: ${message.messageId}');
+  print('Message title: ${message.notification?.title}');
+  print('Message body: ${message.notification?.body}');
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Initialize Firebase
   await Firebase.initializeApp();
-  // Initialize FCM Service (this handles permissions, token, and notifications)
+
+  // Set background message handler
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+
+  // Initialize FCM Service
   await FCMService.initialize();
-  // Get FCM token for debugging
+
+  // Request notification permissions
+  NotificationSettings settings =
+      await FirebaseMessaging.instance.requestPermission(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+  print('Notification permission: ${settings.authorizationStatus}');
+
+  // Get FCM token
   String? token = await FirebaseMessaging.instance.getToken();
   print('✅ FCM Token: $token');
-  // Subscribe to general topics
+
+  // Subscribe to topics
   await FirebaseMessaging.instance.subscribeToTopic('all_users');
   print('✅ Subscribed to all_users topic');
+
+  // Handle foreground messages (app is open)
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    print('📱 Got a message while in foreground!');
+    print('Title: ${message.notification?.title}');
+    print('Body: ${message.notification?.body}');
+
+    // Show in-app notification using your FCMService
+    if (message.notification != null && message.notification!.title != null) {
+      // You can show a dialog or use your existing method
+      // For now, let's show a SnackBar
+      // This will be visible when app is open
+    }
+  });
+
+  // Handle when app is opened from a terminated state
+  RemoteMessage? initialMessage =
+      await FirebaseMessaging.instance.getInitialMessage();
+  if (initialMessage != null) {
+    print('App opened from terminated state by notification');
+  }
+
+  // Handle when app is in background and opened by notification
+  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    print('App opened from background by notification');
+    // Navigate to specific screen if needed
+  });
 
   runApp(const MyApp());
 }
@@ -51,21 +102,6 @@ class MyApp extends StatelessWidget {
         '/admin': (context) => const AdminScreen(),
         '/notifications': (context) => const NotificationsScreen(),
       },
-      // Handle navigation when notification is tapped
-      onGenerateRoute: (settings) {
-        switch (settings.name) {
-          case '/notification':
-          // Navigate to notification details page if needed
-            return MaterialPageRoute(
-              builder: (context) => const HomePage(),
-            );
-          default:
-            return null;
-        }
-      },
     );
   }
 }
-
-// Updated: 05/25/2026 13:41:49
-// Trigger build: 05/25/2026 14:44:16
