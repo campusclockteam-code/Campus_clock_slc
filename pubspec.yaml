@@ -1,4 +1,4 @@
-﻿name: campus_clock_slc
+name: campus_clock_slc
 description: Campus Clock App for Shyam Lal College
 publish_to: 'none'
 
@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Firebase - Working versions
+  # Firebase
   firebase_core: ^2.15.0
   firebase_auth: ^4.7.0
   cloud_firestore: ^4.8.0
