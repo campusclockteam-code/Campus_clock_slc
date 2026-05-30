@@ -1,8 +1,8 @@
-name: Build APK
+name: Build Flutter APK
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 jobs:
@@ -12,39 +12,69 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
-    - name: Set up Java
+    - name: Setup Java
       uses: actions/setup-java@v4
       with:
+        distribution: 'zulu'
         java-version: '17'
-        distribution: 'temurin'
     
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.19.0'
+        flutter-version: '3.16.0'
         channel: 'stable'
+    
+    - name: Create google-services.json
+      env:
+        GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+      run: |
+        if [ -z "$GOOGLE_SERVICES_JSON" ]; then
+          echo "Creating dummy google-services.json for build"
+          echo '{
+            "project_info": {
+              "project_number": "123456789012",
+              "project_id": "dummy-project",
+              "storage_bucket": "dummy-project.appspot.com"
+            },
+            "client": [
+              {
+                "client_info": {
+                  "mobilesdk_app_id": "1:123456789012:android:12345678901234567890",
+                  "android_client_info": {
+                    "package_name": "com.example.campus_clock_slc"
+                  }
+                },
+                "oauth_client": [],
+                "api_key": [
+                  {
+                    "current_key": "AIzaSyDummyKey123456789"
+                  }
+                ],
+                "services": {
+                  "appinvite_service": {
+                    "other_platform_oauth_client": []
+                  }
+                }
+              }
+            ],
+            "configuration_version": "1"
+          }' > android/app/google-services.json
+        else
+          echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+        fi
+        cat android/app/google-services.json
     
     - name: Get dependencies
       run: flutter pub get
     
+    - name: Clean build
+      run: flutter clean
+    
     - name: Build APK
-      run: |
-        set +e
-        flutter build apk --release
-        BUILD_EXIT_CODE=$?
-        echo "Build exit code: $BUILD_EXIT_CODE"
-        if [ -f "build/app/outputs/flutter-apk/app-release.apk" ]; then
-          echo "APK found!"
-          exit 0
-        else
-          exit $BUILD_EXIT_CODE
-        fi
+      run: flutter build apk --release
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
       with:
-        name: campus-clock-app
-        path: |
-          build/app/outputs/flutter-apk/*.apk
-          android/app/build/outputs/apk/release/*.apk
-      if: always()
+        name: release-apk
+        path: build/app/outputs/flutter-apk/*.apk
