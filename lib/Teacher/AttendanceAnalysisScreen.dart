@@ -58,7 +58,10 @@ class _AttendanceAnalysisScreenState extends State<AttendanceAnalysisScreen> {
     _studentAttendance = studentMap.values.toList();
     _totalStudents = _studentAttendance.length;
     _totalPresentDays = _studentAttendance.fold(0, (sum, s) => sum + (s.presentDays ?? 0));
-    final totalPossibleDays = _studentAttendance.fold(0, (sum, s) => sum + (s.totalDays ?? 0));
+    int totalPossibleDays = 0;
+for (var s in _studentAttendance) {
+  totalPossibleDays += (s.totalDays ?? 0);
+}
     _averageAttendance = totalPossibleDays > 0 ? (_totalPresentDays / totalPossibleDays) * 100 : 0;
 
     setState(() => _isLoading = false);
