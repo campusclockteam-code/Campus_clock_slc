@@ -3,53 +3,53 @@ description: Campus Clock App for Shyam Lal College
 publish_to: 'none'
 
 environment:
-  sdk: '>=3.0.0 <4.0.0'
-  flutter: '>=3.13.0'
+  sdk: '>=2.19.0 <4.0.0'
+  flutter: '>=3.7.0'
 
 dependencies:
   flutter:
     sdk: flutter
 
-  # Firebase
-  firebase_core: ^2.24.2
-  firebase_auth: ^4.16.0
-  cloud_firestore: ^4.14.0
-  firebase_messaging: ^14.7.0
+  # Firebase - Working versions
+  firebase_core: ^2.15.0
+  firebase_auth: ^4.7.0
+  cloud_firestore: ^4.8.0
+  firebase_messaging: ^14.6.0
 
   # UI & Utilities
-  flutter_svg: ^2.0.9
-  shared_preferences: ^2.2.2
-  image_picker: ^1.0.5
-  path_provider: ^2.1.1
+  flutter_svg: ^2.0.7
+  shared_preferences: ^2.2.0
+  image_picker: ^1.0.4
+  path_provider: ^2.0.15
   path: ^1.8.3
 
   # Database
-  sqflite: ^2.3.0
+  sqflite: ^2.2.8
 
   # QR & Scanner
-  qr_flutter: ^4.1.0
-  mobile_scanner: ^4.0.0
+  qr_flutter: ^4.0.0
+  mobile_scanner: ^3.5.0
 
   # Web & URLs
-  webview_flutter: ^4.4.2
-  url_launcher: ^6.1.14
+  webview_flutter: ^4.2.0
+  url_launcher: ^6.1.11
 
   # Charts & Analytics
-  fl_chart: ^0.64.0
-  intl: ^0.18.1
+  fl_chart: ^0.63.0
+  intl: ^0.18.0
 
   # PDF & Sharing
-  printing: ^5.11.1
-  share_plus: ^7.0.2
+  printing: ^5.10.4
+  share_plus: ^6.3.4
 
   # Utilities
   async: ^2.11.0
-  cupertino_icons: ^1.0.6
+  cupertino_icons: ^1.0.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^3.0.0
+  flutter_lints: ^2.0.0
 
 flutter:
   uses-material-design: true

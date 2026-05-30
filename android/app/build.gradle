@@ -1,4 +1,4 @@
-plugins {
+﻿plugins {
     id "com.android.application"
     id "kotlin-android"
     id "dev.flutter.flutter-gradle-plugin"
@@ -6,21 +6,21 @@ plugins {
 
 android {
     namespace = "com.example.campus_clock_slc"
-    compileSdk = 34
+    compileSdk = 33
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_11
+        targetCompatibility = JavaVersion.VERSION_11
     }
 
     kotlinOptions {
-        jvmTarget = "17"
+        jvmTarget = "11"
     }
 
     defaultConfig {
         applicationId = "com.example.campus_clock_slc"
-        minSdk = 23
-        targetSdk = 34
+        minSdk = 21
+        targetSdk = 33
         versionCode = 1
         versionName = "1.0.0"
         multiDexEnabled = true
@@ -29,12 +29,12 @@ android {
     buildTypes {
         release {
             signingConfig = signingConfigs.debug
-            minifyEnabled = false
-            shrinkResources = false
+            minifyEnabled false
+            shrinkResources false
         }
         debug {
-            minifyEnabled = false
-            shrinkResources = false
+            minifyEnabled false
+            shrinkResources false
         }
     }
 }
@@ -44,12 +44,7 @@ flutter {
 }
 
 dependencies {
-    implementation "androidx.multidex:multidex:2.0.1"
-    implementation platform('com.google.firebase:firebase-bom:32.7.0')
-    implementation 'com.google.firebase:firebase-analytics'
-    implementation 'com.google.firebase:firebase-auth'
-    implementation 'com.google.firebase:firebase-firestore'
-    implementation 'com.google.firebase:firebase-messaging'
+    implementation 'androidx.multidex:multidex:2.0.1'
 }
 
 apply plugin: 'com.google.gms.google-services'
