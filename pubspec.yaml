@@ -10,7 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
 
-  # Firebase
+  # Firebase - Older stable versions
   firebase_core: ^2.15.0
   firebase_auth: ^4.7.0
   cloud_firestore: ^4.8.0
@@ -22,27 +22,15 @@ dependencies:
   image_picker: ^1.0.4
   path_provider: ^2.0.15
   path: ^1.8.3
-
-  # Database
   sqflite: ^2.2.8
-
-  # QR & Scanner
   qr_flutter: ^4.0.0
   mobile_scanner: ^3.5.0
-
-  # Web & URLs
   webview_flutter: ^4.2.0
   url_launcher: ^6.1.11
-
-  # Charts & Analytics
   fl_chart: ^0.63.0
   intl: ^0.18.0
-
-  # PDF & Sharing
   printing: ^5.10.4
   share_plus: ^6.3.4
-
-  # Utilities
   async: ^2.11.0
   cupertino_icons: ^1.0.5
 
