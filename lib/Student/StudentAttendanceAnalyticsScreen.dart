@@ -186,7 +186,7 @@ class _StudentAttendanceAnalyticsScreenState extends State<StudentAttendanceAnal
                   ),
                   borderData: FlBorderData(show: false),
                   barGroups: _getMonthlyData(),
-                  gridData: const FlGridData(show: true, drawVerticalLine: false),
+                  gridData: FlGridData(show: true, drawVerticalLine: false),
                 ),
               ),
             ),

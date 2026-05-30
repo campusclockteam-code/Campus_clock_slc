@@ -32,8 +32,8 @@ class _AnimatedBackgroundState extends State<AnimatedBackground> with SingleTick
         x: math.Random().nextDouble() * 100,
         y: math.Random().nextDouble() * 100,
         size: math.Random().nextDouble() * 3 + 1,
-        speed: math.Random().nextDouble() * 0.5 + 0.1,
-        opacity: math.Random().nextDouble() * 0.3 + 0.1,
+        speed: math.Random().nextDouble() * 0.5 + (0.1 ?? 0),
+        opacity: math.Random().nextDouble() * 0.3 + (0.1 ?? 0),
       ));
     }
   }
