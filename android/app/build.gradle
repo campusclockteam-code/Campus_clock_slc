@@ -54,11 +54,6 @@ android {
             shrinkResources false
         }
     }
-
-    dexOptions {
-        preDexLibraries false
-        javaMaxHeapSize "4g"
-    }
 }
 
 flutter {
