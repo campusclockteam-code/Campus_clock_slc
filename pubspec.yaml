@@ -12,9 +12,9 @@ dependencies:
 
   # Firebase - Older stable versions
   firebase_core: ^2.15.0
-  firebase_auth: ^4.7.0
-  cloud_firestore: ^4.8.0
-  firebase_messaging: ^14.6.0
+  firebase_auth: ^4.2.0
+  cloud_firestore: ^4.5.0
+  firebase_messaging: ^14.2.0
 
   # UI & Utilities
   flutter_svg: ^2.0.7
