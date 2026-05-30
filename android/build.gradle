@@ -1,4 +1,4 @@
-﻿buildscript {
+buildscript {
     ext.kotlin_version = '1.8.22'
     repositories {
         google()
@@ -16,8 +16,4 @@ allprojects {
         google()
         mavenCentral()
     }
-}
-
-tasks.register('clean', Delete) {
-    delete rootProject.buildDir
 }
