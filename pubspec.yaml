@@ -1,4 +1,4 @@
-﻿name: campus_clock_slc
+name: campus_clock_slc
 description: Campus Clock App for Shyam Lal College
 publish_to: 'none'
 
@@ -21,7 +21,7 @@ dependencies:
   shared_preferences: ^2.3.3
   image_picker: ^1.0.7
   path_provider: ^2.1.4
-  path: ^1.9.0
+  path: 1.8.3
 
   # Database
   sqflite: ^2.3.3
