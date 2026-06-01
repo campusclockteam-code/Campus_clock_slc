@@ -11,15 +11,15 @@ dependencies:
     sdk: flutter
 
   # Firebase
-  firebase_core: ^2.32.0
+  firebase_core: ^2.24.2
   firebase_auth: ^4.16.0
-  cloud_firestore: ^4.17.5
-  firebase_messaging: ^14.7.10
+  cloud_firestore: ^4.14.0
+  firebase_messaging: ^14.6.0
 
   # UI & Utilities
   flutter_svg: ^2.1.0
   shared_preferences: ^2.3.3
-  image_picker: ^1.0.7
+  image_picker: ^1.0.4
   path_provider: ^2.1.4
   path: 1.8.3
 
@@ -31,15 +31,15 @@ dependencies:
   mobile_scanner: ^4.0.1
 
   # Web & URLs
-  webview_flutter: ^4.8.0
-  url_launcher: ^6.3.1
+  webview_flutter: ^4.4.2
+  url_launcher: ^6.2.1
 
   # Charts & Analytics
   fl_chart: ^0.68.0
-  intl: ^0.18.1
+  intl: ^0.18.0
 
   # PDF & Sharing
-  printing: ^5.13.0
+  printing: ^5.11.1
   share_plus: ^7.2.2
 
   # Utilities
