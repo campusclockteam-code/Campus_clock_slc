@@ -38,35 +38,16 @@ jobs:
     - name: Get dependencies
       run: flutter pub get
     
-    - name: Run gradle tasks
+    - name: Build with Gradle directly
       run: |
         cd android
         chmod +x gradlew
-        ./gradlew tasks --all
+        ./gradlew assembleRelease --stacktrace
     
-    - name: Build APK
-      run: flutter build apk --release
-    
-    - name: List build output
+    - name: List APK files
       if: always()
       run: |
-        echo "=== Current directory ==="
-        pwd
-        echo "=== Build directory contents ==="
-        ls -la build/ || echo "build directory not found"
-        echo "=== Flutter APK directory ==="
-        ls -la build/app/outputs/flutter-apk/ || echo "flutter-apk directory not found"
-        echo "=== All APK files ==="
-        find . -name "*.apk" -type f || echo "No APK files found"
-        echo "=== Gradle build output ==="
-        find . -name "*.apk" -path "*/build/outputs/*" -type f || echo "No APK in build outputs"
-    
-    - name: Upload APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: campus-clock-apk
-        path: |
-          build/app/outputs/flutter-apk/*.apk
-          build/app/outputs/apk/release/*.apk
-          **/*.apk
-        if-no-files-found: warn
+        echo "=== APK files ==="
+        find . -name "*.apk" -type f
+        echo "=== Build outputs ==="
+        ls -la android/app/build/outputs/ || echo "No outputs"
