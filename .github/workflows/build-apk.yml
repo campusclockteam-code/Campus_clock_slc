@@ -38,14 +38,17 @@ jobs:
     - name: Get dependencies
       run: flutter pub get
     
-    - name: Build APK
-      run: flutter build apk --release
+    - name: Build APK with verbose output
+      run: flutter build apk --release --verbose
     
-    - name: List build output
+    - name: List all build directories
       run: |
-        echo "Checking for APK files..."
-        find . -name "*.apk" -type f
-        ls -la build/app/outputs/flutter-apk/ || echo "Directory not found"
+        echo "=== Listing build directory ==="
+        ls -la build/ || echo "build directory not found"
+        echo "=== Listing flutter-apk directory ==="
+        ls -la build/app/outputs/flutter-apk/ || echo "flutter-apk directory not found"
+        echo "=== Listing all APK files ==="
+        find . -name "*.apk" -type f || echo "No APK files found"
     
     - name: Upload APK
       uses: actions/upload-artifact@v4
