@@ -17,7 +17,7 @@ dependencies:
   firebase_messaging: ^14.6.0
 
   # UI & Utilities
-  flutter_svg: ^2.1.0
+  flutter_svg: ^2.0.9
   shared_preferences: ^2.3.3
   image_picker: ^1.0.4
   path_provider: ^2.1.4
