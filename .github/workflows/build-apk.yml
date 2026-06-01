@@ -8,6 +8,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        flutter-version: ['3.22.0']
     
     steps:
     - uses: actions/checkout@v4
@@ -21,8 +25,14 @@ jobs:
     - name: Setup Flutter
       uses: subosito/flutter-action@v2
       with:
-        flutter-version: '3.22.0'
+        flutter-version: ${{ matrix.flutter-version }}
         channel: 'stable'
+        cache: false
+    
+    - name: Clean Flutter cache
+      run: |
+        rm -rf ${{ runner.tool_cache }}/flutter
+        flutter config --no-analytics
     
     - name: Create local.properties
       run: |
