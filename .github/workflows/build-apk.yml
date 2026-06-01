@@ -8,10 +8,6 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        flutter-version: ['3.22.0']
     
     steps:
     - uses: actions/checkout@v4
@@ -22,21 +18,15 @@ jobs:
         distribution: 'temurin'
         java-version: '17'
     
-    - name: Setup Flutter
-      uses: subosito/flutter-action@v2
-      with:
-        flutter-version: ${{ matrix.flutter-version }}
-        channel: 'stable'
-        cache: false
-    
-    - name: Clean Flutter cache
+    - name: Download Flutter SDK
       run: |
-        rm -rf ${{ runner.tool_cache }}/flutter
-        flutter config --no-analytics
+        wget https://storage.googleapis.com/flutter_infra_release/releases/stable/linux/flutter_linux_3.22.0-stable.tar.xz
+        tar xf flutter_linux_3.22.0-stable.tar.xz
+        echo "${{ github.workspace }}/flutter/bin" >> $GITHUB_PATH
     
     - name: Create local.properties
       run: |
-        echo "flutter.sdk=${{ runner.tool_cache }}/flutter" > android/local.properties
+        echo "flutter.sdk=${{ github.workspace }}/flutter" > android/local.properties
         echo "flutter.versionCode=1" >> android/local.properties
         echo "flutter.versionName=1.0.0" >> android/local.properties
     
@@ -46,7 +36,9 @@ jobs:
         echo '{"project_info":{"project_number":"123456789012","project_id":"dummy"},"client":[{"client_info":{"mobilesdk_app_id":"1:123456789012:android:12345678901234567890","android_client_info":{"package_name":"com.example.campus_clock_slc"}},"api_key":[{"current_key":"AIzaSyDummy"}]}]}' > android/app/google-services.json
     
     - name: Get dependencies
-      run: flutter pub get
+      run: |
+        flutter doctor
+        flutter pub get
     
     - name: Build APK
       run: flutter build apk --release
